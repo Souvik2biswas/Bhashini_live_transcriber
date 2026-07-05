@@ -1,3 +1,15 @@
+---
+title: Bhashini Live Transcriber
+emoji: 🎙️
+colorFrom: indigo
+colorTo: cyan
+sdk: gradio
+sdk_version: 4.21.0
+python_version: 3.10
+app_file: app.py
+pinned: false
+---
+
 # Bhashini Live Transcriber & Translator
 
 A premium, real-time speech transcription and translation web application built using **Django Channels (WebSockets)**, powered by the **Bhashini (ULCA / Dhruva) API** (MeitY, Govt. of India) to translate Dravidian languages (Tamil, Telugu, Kannada, and Malayalam) into English.
