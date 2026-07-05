@@ -1,0 +1,7 @@
+django>=5.0
+channels>=4.0
+daphne
+requests
+numpy
+pydub
+python-dotenv

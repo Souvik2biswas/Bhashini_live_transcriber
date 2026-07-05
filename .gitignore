@@ -1,0 +1,15 @@
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+staticfiles/
+
+# Environment variables (Credentials)
+.env
+
+# Scratch files / local test chunks
+scratch/
+debug/
+*.wav
+*.mp3
+*.webm

@@ -1,0 +1,331 @@
+"""
+Bhashini API Layer
+──────────────────
+Refactored from the standalone CLI scripts for use in Django.
+Provides pipeline configuration, ASR + NMT chained inference,
+and text-only translation.
+
+All functions are synchronous (called via sync_to_async in the consumer).
+Pipeline config is cached per-language for the lifetime of the process.
+"""
+
+import json
+import threading
+from typing import Optional
+
+import requests
+from django.conf import settings
+
+
+# ─── Constants ──────────────────────────────────────────────────────────────────
+CONFIG_URL  = settings.BHASHINI_CONFIG_URL
+PIPELINE_ID = settings.BHASHINI_PIPELINE_ID
+USER_ID     = settings.BHASHINI_USER_ID
+ULCA_API_KEY = settings.BHASHINI_ULCA_KEY
+
+SAMPLE_RATE = 16000
+
+# ─── Language Registry ─────────────────────────────────────────────────────────
+LANGUAGES = {
+    "ta": {
+        "name":      "Tamil",
+        "native":    "தமிழ்",
+        "supported": True,
+    },
+    "te": {
+        "name":      "Telugu",
+        "native":    "తెలుగు",
+        "supported": True,
+    },
+    "kn": {
+        "name":      "Kannada",
+        "native":    "ಕನ್ನಡ",
+        "supported": True,
+    },
+    "ml": {
+        "name":      "Malayalam",
+        "native":    "മലയാളം",
+        "supported": True,
+    },
+}
+
+SUPPORTED_CODES = [c for c, v in LANGUAGES.items() if v["supported"]]
+
+
+# ─── Thread-Safe Pipeline Config Cache ──────────────────────────────────────────
+_config_cache: dict = {}
+_cache_lock = threading.Lock()
+
+
+def get_pipeline_config(source_lang: str) -> dict:
+    """
+    Pipeline Config Call — fetches ASR + NMT service IDs and the dynamic
+    inference endpoint. Result is cached per language for the lifetime of
+    the process (one call per language per session).
+
+    Returns dict with:
+        callback_url, auth_key_name, auth_key_value,
+        asr_service_id, nmt_service_id
+    """
+    with _cache_lock:
+        if source_lang in _config_cache:
+            return _config_cache[source_lang]
+
+    payload = {
+        "pipelineTasks": [
+            {
+                "taskType": "asr",
+                "config": {
+                    "language": {"sourceLanguage": source_lang}
+                }
+            },
+            {
+                "taskType": "translation",
+                "config": {
+                    "language": {
+                        "sourceLanguage": source_lang,
+                        "targetLanguage": "en"
+                    }
+                }
+            }
+        ],
+        "pipelineRequestConfig": {
+            "pipelineId": PIPELINE_ID
+        }
+    }
+
+    headers = {
+        "userID":       USER_ID,
+        "ulcaApiKey":   ULCA_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        resp = requests.post(CONFIG_URL, json=payload, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Pipeline config call timed out (15s). Check your internet.")
+    except requests.exceptions.HTTPError as e:
+        raise RuntimeError(f"Pipeline config HTTP {resp.status_code}: {e}")
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Pipeline config request failed: {e}")
+
+    # ── Parse response ────────────────────────────────────────────────────────
+    try:
+        task_configs = data["pipelineResponseConfig"]
+
+        asr_cfg = next(
+            (t for t in task_configs if t["taskType"] == "asr"), None
+        )
+        nmt_cfg = next(
+            (t for t in task_configs if t["taskType"] == "translation"), None
+        )
+
+        if asr_cfg is None:
+            raise RuntimeError(
+                f"No ASR config returned for language '{source_lang}'. "
+                f"Supported: {', '.join(SUPPORTED_CODES)}"
+            )
+        if nmt_cfg is None:
+            raise RuntimeError(
+                f"No NMT config returned for language '{source_lang}'."
+            )
+
+        endpoint       = data["pipelineInferenceAPIEndPoint"]
+        callback_url   = endpoint["callbackUrl"]
+        auth_key_name  = endpoint["inferenceApiKey"]["name"]
+        auth_key_value = endpoint["inferenceApiKey"]["value"]
+        asr_service_id = asr_cfg["config"][0]["serviceId"]
+        nmt_service_id = nmt_cfg["config"][0]["serviceId"]
+
+    except (KeyError, IndexError) as e:
+        raise RuntimeError(
+            f"Unexpected config response structure (key: {e}).\n"
+            f"Raw:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
+        )
+
+    result = {
+        "callback_url":   callback_url,
+        "auth_key_name":  auth_key_name,
+        "auth_key_value": auth_key_value,
+        "asr_service_id": asr_service_id,
+        "nmt_service_id": nmt_service_id,
+    }
+
+    with _cache_lock:
+        _config_cache[source_lang] = result
+
+    return result
+
+
+def transcribe_and_translate(
+    audio_b64_wav: str,
+    source_lang: str,
+) -> tuple[str, str]:
+    """
+    Pipeline Compute Call — sends base64-encoded WAV audio through chained
+    ASR → NMT in a single API round-trip.
+
+    Args:
+        audio_b64_wav : base64-encoded WAV string (16kHz, mono, PCM16)
+        source_lang   : ISO 639 code ('ta', 'te', 'kn', 'ml')
+
+    Returns:
+        (transcript_in_source_lang, english_translation)
+    """
+    config = get_pipeline_config(source_lang)
+
+    payload = {
+        "pipelineTasks": [
+            {
+                "taskType": "asr",
+                "config": {
+                    "language":     {"sourceLanguage": source_lang},
+                    "serviceId":    config["asr_service_id"],
+                    "audioFormat":  "wav",
+                    "samplingRate": SAMPLE_RATE,
+                }
+            },
+            {
+                "taskType": "translation",
+                "config": {
+                    "language": {
+                        "sourceLanguage": source_lang,
+                        "targetLanguage": "en"
+                    },
+                    "serviceId": config["nmt_service_id"],
+                }
+            }
+        ],
+        "inputData": {
+            "audio": [{"audioContent": audio_b64_wav}],
+        }
+    }
+
+    headers = {
+        config["auth_key_name"]: config["auth_key_value"],
+        "Content-Type": "application/json"
+    }
+
+    max_retries = 3
+    retry_delay = 0.3
+    last_error_msg = ""
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.post(
+                config["callback_url"],
+                json=payload,
+                headers=headers,
+                timeout=10  # 10s per attempt
+            )
+            if resp.ok:
+                data = resp.json()
+                break
+            else:
+                last_error_msg = f"Dhruva API {resp.status_code}: {resp.reason} (Attempt {attempt})"
+                if resp.status_code == 500 or resp.status_code == 429:
+                    import time
+                    time.sleep(retry_delay * attempt)
+                    continue
+                else:
+                    raise RuntimeError(last_error_msg + f"\nBody: {resp.text[:500]}")
+        except requests.exceptions.Timeout:
+            last_error_msg = f"Compute call timed out (Attempt {attempt})"
+            import time
+            time.sleep(retry_delay * attempt)
+            continue
+        except requests.exceptions.RequestException as e:
+            last_error_msg = f"Compute call failed: {e} (Attempt {attempt})"
+            import time
+            time.sleep(retry_delay * attempt)
+            continue
+    else:
+        raise RuntimeError(f"Compute call failed after {max_retries} attempts. Last error: {last_error_msg}")
+
+    # ── Parse chained response ────────────────────────────────────────────────
+    try:
+        responses = data["pipelineResponse"]
+
+        asr_out = next(
+            (r for r in responses if r["taskType"] == "asr"), None
+        )
+        nmt_out = next(
+            (r for r in responses if r["taskType"] == "translation"), None
+        )
+
+        if asr_out is None or nmt_out is None:
+            raise RuntimeError(
+                f"Missing ASR or NMT block in response.\n"
+                f"Raw:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
+            )
+
+        transcript  = asr_out["output"][0]["source"]
+        translation = nmt_out["output"][0]["target"]
+        return transcript.strip(), translation.strip()
+
+    except (KeyError, IndexError) as e:
+        raise RuntimeError(
+            f"Response parse error (key: {e}).\n"
+            f"Raw:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
+        )
+
+
+def translate_text(text: str, source_lang: str, target_lang: str = "en") -> str:
+    """
+    Text-only translation via Bhashini NMT.
+    Uses only the NMT service (no ASR).
+
+    Args:
+        text        : Input text in source language
+        source_lang : ISO 639 code
+        target_lang : Target language code (default: 'en')
+
+    Returns:
+        Translated string
+    """
+    if not text.strip():
+        raise ValueError("Input text cannot be empty.")
+
+    config = get_pipeline_config(source_lang)
+
+    payload = {
+        "pipelineTasks": [
+            {
+                "taskType": "translation",
+                "config": {
+                    "language": {
+                        "sourceLanguage": source_lang,
+                        "targetLanguage": target_lang
+                    },
+                    "serviceId": config["nmt_service_id"]
+                }
+            }
+        ],
+        "inputData": {
+            "input": [{"source": text}]
+        }
+    }
+
+    headers = {
+        config["auth_key_name"]: config["auth_key_value"],
+        "Content-Type": "application/json"
+    }
+
+    try:
+        resp = requests.post(
+            config["callback_url"],
+            json=payload,
+            headers=headers,
+            timeout=25
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Translation call failed: {e}")
+
+    try:
+        return data["pipelineResponse"][0]["output"][0]["target"]
+    except (KeyError, IndexError) as e:
+        raise RuntimeError(f"Translation response parse error: {e}")
