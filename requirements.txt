@@ -5,6 +5,4 @@ requests
 numpy
 python-dotenv
 whitenoise
-gradio
-
 
