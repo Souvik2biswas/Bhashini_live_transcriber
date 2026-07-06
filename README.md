@@ -2,10 +2,10 @@
 title: Bhashini Live Transcriber
 emoji: 🎙️
 colorFrom: indigo
-colorTo: cyan
+colorTo: green
 sdk: gradio
 sdk_version: 4.21.0
-python_version: 3.10
+python_version: "3.10"
 app_file: app.py
 pinned: false
 ---
