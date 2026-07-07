@@ -73,12 +73,20 @@ CHANNEL_LAYERS = {
 }
 
 # ─── Database (not needed for this app, but Django requires it) ─────────────
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if os.getenv("VERCEL"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # ─── Static Files ──────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"

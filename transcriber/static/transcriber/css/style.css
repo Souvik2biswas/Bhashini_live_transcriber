@@ -244,7 +244,7 @@ body::before {
 /* ─── Language Selector ──────────────────────────────────────────────────────── */
 .language-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 12px;
 }
 
@@ -311,6 +311,20 @@ body::before {
     position: relative;
     z-index: 1;
     letter-spacing: 0.02em;
+}
+
+.lang-tag {
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .lang-check {
@@ -891,4 +905,64 @@ body::before {
     .lang-native {
         font-size: 1.1rem;
     }
+}
+
+/* ─── Family Filter Pills ─── */
+.family-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.filter-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+}
+
+.filter-pill:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.filter-pill.active {
+    background: var(--accent-indigo);
+    border-color: var(--accent-indigo);
+    color: var(--text-primary);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+/* ─── Family Sections ─── */
+.family-section-group {
+    margin-bottom: 32px;
+    transition: all 0.3s var(--ease-out);
+}
+
+.family-section-group.hidden {
+    display: none !important;
+}
+
+.family-header {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.family-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-glass);
 }

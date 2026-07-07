@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Live speech transcription and translation from Dravidian languages to English, powered by Bhashini AI">
-    <title>Bhashini Live Transcriber — Dravidian → English</title>
+    <meta name="description" content="Live speech transcription and translation from Indian languages to English, powered by Bhashini AI">
+    <title>Bhashini Live Transcriber — Indian Languages → English</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,7 +44,7 @@
                 </div>
                 <div>
                     <h1 class="app-title">Bhashini Live Transcriber</h1>
-                    <p class="app-subtitle">Dravidian Languages → English · Powered by ULCA / Dhruva API</p>
+                    <p class="app-subtitle">Indian Languages → English · Powered by ULCA / Dhruva API</p>
                 </div>
             </div>
             <div class="connection-badge" id="connectionBadge">
@@ -59,6 +59,17 @@
         <!-- ═══ Language Selector ═══ -->
         <section class="language-section">
             <h2 class="section-label">Select Source Language</h2>
+            
+            <!-- Category Filter Pills -->
+            <div class="family-filters" id="familyFilters">
+                <button class="filter-pill active" data-family="all">All</button>
+                <button class="filter-pill" data-family="Indo-Aryan">Indo-Aryan Branch</button>
+                <button class="filter-pill" data-family="Dravidian">Dravidian Family</button>
+                <button class="filter-pill" data-family="Sino-Tibetan">Sino-Tibetan Family</button>
+                <button class="filter-pill" data-family="Austroasiatic">Austroasiatic Family</button>
+                <button class="filter-pill" data-family="Other">Other / Global</button>
+            </div>
+
             <div class="language-grid" id="languageGrid">
                 <button class="lang-card active" data-lang="ta" id="lang-ta">
                     <span class="lang-native">தமிழ்</span>

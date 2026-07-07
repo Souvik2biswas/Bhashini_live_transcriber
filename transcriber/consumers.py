@@ -65,6 +65,9 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
                 code: {
                     "name": info["name"],
                     "native": info["native"],
+                    "asr_supported": info.get("asr_supported", True),
+                    "translation_supported": info.get("translation_supported", True),
+                    "family": info.get("family", "Other"),
                 }
                 for code, info in LANGUAGES.items()
                 if info["supported"]

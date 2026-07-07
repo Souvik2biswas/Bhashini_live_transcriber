@@ -85,7 +85,7 @@
             console.log('[WS] Connected');
             reconnectAttempts = 0;
             updateConnectionStatus('connected');
-            dom.recordBtn.disabled = false;
+            updateMicrophoneState();
 
             // Send language config
             sendConfig(selectedLang);
@@ -103,7 +103,7 @@
         ws.onclose = (event) => {
             console.log(`[WS] Disconnected (code=${event.code})`);
             updateConnectionStatus('disconnected');
-            dom.recordBtn.disabled = true;
+            updateMicrophoneState();
 
             if (isRecording) {
                 stopRecording();
@@ -161,7 +161,7 @@
     function handleServerMessage(msg) {
         switch (msg.type) {
             case 'languages':
-                // Initial language list — we already have them in HTML
+                renderLanguageGrid(msg.languages);
                 break;
 
             case 'config_ready':
@@ -381,6 +381,8 @@
     // UI Updates
     // ═══════════════════════════════════════════════════════════════════════════
 
+    let supportedLanguages = {};
+
     function updateRecordingUI(recording) {
         const btn = dom.recordBtn;
         const micIcon = btn.querySelector('.mic-icon');
@@ -396,8 +398,133 @@
             btn.classList.remove('recording');
             micIcon.classList.remove('hidden');
             stopIcon.classList.add('hidden');
-            dom.recordBtnLabel.textContent = 'Start Recording';
             dom.levelContainer.classList.remove('visible');
+            updateMicrophoneState();
+        }
+    }
+
+    const FAMILY_ORDER = [
+        "Indo-Aryan",
+        "Dravidian",
+        "Sino-Tibetan",
+        "Austroasiatic",
+        "Other"
+    ];
+
+    const FAMILY_NAMES = {
+        "Indo-Aryan": "Indo-Aryan Branch",
+        "Dravidian": "Dravidian Family",
+        "Sino-Tibetan": "Sino-Tibetan Family",
+        "Austroasiatic": "Austroasiatic Family",
+        "Other": "Other / Global"
+    };
+
+    function applyActiveFilter() {
+        const activePill = document.querySelector('.filter-pill.active');
+        if (!activePill) return;
+
+        const activeFamily = activePill.dataset.family;
+        document.querySelectorAll('.family-section-group').forEach(group => {
+            if (activeFamily === 'all' || group.dataset.family === activeFamily) {
+                group.classList.remove('hidden');
+            } else {
+                group.classList.add('hidden');
+            }
+        });
+    }
+
+    function renderLanguageGrid(languages) {
+        supportedLanguages = languages;
+        if (!dom.languageGrid) return;
+
+        dom.languageGrid.innerHTML = '';
+        dom.languageGrid.style.display = 'block';
+
+        FAMILY_ORDER.forEach(family => {
+            const familyLangs = Object.entries(languages).filter(([code, info]) => {
+                const f = info.family || "Other";
+                return f === family;
+            });
+
+            if (familyLangs.length === 0) return;
+
+            const sectionGroup = document.createElement('div');
+            sectionGroup.className = 'family-section-group';
+            sectionGroup.dataset.family = family;
+
+            const header = document.createElement('h3');
+            header.className = 'family-header';
+            header.textContent = FAMILY_NAMES[family] || family;
+            sectionGroup.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.className = 'language-grid';
+
+            familyLangs.forEach(([code, info]) => {
+                const card = document.createElement('button');
+                card.className = 'lang-card';
+                if (code === selectedLang) {
+                    card.classList.add('active');
+                }
+                card.dataset.lang = code;
+                card.id = `lang-${code}`;
+
+                const tagHtml = !info.asr_supported ? '\n                <span class="lang-tag">Text Only</span>' : '';
+                card.innerHTML = `
+                    <span class="lang-native">${escapeHtml(info.native)}</span>
+                    <span class="lang-name">${escapeHtml(info.name)}</span>${tagHtml}
+                    <span class="lang-check">✓</span>
+                `;
+
+                card.addEventListener('click', () => {
+                    if (selectedLang === code) return;
+
+                    document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+
+                    selectedLang = code;
+                    sendConfig(selectedLang);
+                    updateMicrophoneState();
+
+                    // If recording, stop and restart to apply new language
+                    if (isRecording) {
+                        stopRecording();
+                        setTimeout(() => {
+                            if (supportedLanguages[selectedLang]?.asr_supported) {
+                                startRecording();
+                            }
+                        }, 500);
+                    }
+                });
+
+                grid.appendChild(card);
+            });
+
+            sectionGroup.appendChild(grid);
+            dom.languageGrid.appendChild(sectionGroup);
+        });
+
+        applyActiveFilter();
+        updateMicrophoneState();
+    }
+
+    function updateMicrophoneState() {
+        const langConfig = supportedLanguages[selectedLang];
+        const btn = dom.recordBtn;
+        if (!btn) return;
+
+        if (langConfig && !langConfig.asr_supported) {
+            btn.disabled = true;
+            dom.recordBtnLabel.textContent = 'Speech Input Unsupported';
+            btn.title = `Speech recognition is not supported for ${langConfig.name}`;
+        } else if (ws && ws.readyState === WebSocket.OPEN) {
+            btn.disabled = false;
+            dom.recordBtnLabel.textContent = isRecording ? 'Stop Recording' : 'Start Recording';
+            btn.title = '';
+        } else {
+            btn.disabled = true;
+            dom.recordBtnLabel.textContent = 'Start Recording';
+            btn.title = 'Connecting to server…';
         }
     }
 
@@ -547,24 +674,6 @@
     // ═══════════════════════════════════════════════════════════════════════════
 
     function init() {
-        // Language selection
-        document.querySelectorAll('.lang-card').forEach((card) => {
-            card.addEventListener('click', () => {
-                // Update active state
-                document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-
-                selectedLang = card.dataset.lang;
-                sendConfig(selectedLang);
-
-                // If recording, stop and restart to apply new language
-                if (isRecording) {
-                    stopRecording();
-                    // Small delay then restart
-                    setTimeout(() => startRecording(), 500);
-                }
-            });
-        });
 
         // Record button
         dom.recordBtn.addEventListener('click', () => {
@@ -585,6 +694,15 @@
                 e.preventDefault();
                 sendTextTranslation();
             }
+        });
+
+        // Family filters
+        document.querySelectorAll('.filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                applyActiveFilter();
+            });
         });
 
         // Connect WebSocket

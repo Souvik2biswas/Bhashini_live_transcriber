@@ -27,25 +27,189 @@ SAMPLE_RATE = 16000
 
 # ─── Language Registry ─────────────────────────────────────────────────────────
 LANGUAGES = {
-    "ta": {
-        "name":      "Tamil",
-        "native":    "தமிழ்",
+    "en": {
+        "name": "English",
+        "native": "English",
         "supported": True,
+        "asr_supported": True,
+        "translation_supported": False,
+        "family": "Other",
     },
-    "te": {
-        "name":      "Telugu",
-        "native":    "తెలుగు",
+    "as": {
+        "name": "Assamese",
+        "native": "অসমীয়া",
         "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "bn": {
+        "name": "Bengali",
+        "native": "বাংলা",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "brx": {
+        "name": "Bodo",
+        "native": "बर'",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Sino-Tibetan",
+    },
+    "doi": {
+        "name": "Dogri",
+        "native": "डोगरी",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "gu": {
+        "name": "Gujarati",
+        "native": "ગુજરાતી",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "hi": {
+        "name": "Hindi",
+        "native": "हिन्दी",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
     },
     "kn": {
-        "name":      "Kannada",
-        "native":    "ಕನ್ನಡ",
+        "name": "Kannada",
+        "native": "ಕನ್ನಡ",
         "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Dravidian",
+    },
+    "ks": {
+        "name": "Kashmiri",
+        "native": "کٲشُر",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "gom": {
+        "name": "Konkani (Goan)",
+        "native": "कोंकणी",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "mai": {
+        "name": "Maithili",
+        "native": "मैथिली",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
     },
     "ml": {
-        "name":      "Malayalam",
-        "native":    "മലയാളം",
+        "name": "Malayalam",
+        "native": "മലയാളം",
         "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Dravidian",
+    },
+    "mni": {
+        "name": "Manipuri",
+        "native": "মৈতৈলোন্",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Sino-Tibetan",
+    },
+    "mr": {
+        "name": "Marathi",
+        "native": "मराठी",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "ne": {
+        "name": "Nepali",
+        "native": "नेपाली",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "or": {
+        "name": "Odia (Oriya)",
+        "native": "ଓଡ଼ିଆ",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "pa": {
+        "name": "Punjabi",
+        "native": "ਪੰਜਾਬੀ",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "sa": {
+        "name": "Sanskrit",
+        "native": "संस्कृतम्",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "sat": {
+        "name": "Santali",
+        "native": "ᱥᱟᱱᱛᱟᱲᱤ",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Austroasiatic",
+    },
+    "sd": {
+        "name": "Sindhi",
+        "native": "سنڌي",
+        "supported": True,
+        "asr_supported": False,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
+    },
+    "ta": {
+        "name": "Tamil",
+        "native": "தமிழ்",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Dravidian",
+    },
+    "te": {
+        "name": "Telugu",
+        "native": "తెలుగు",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Dravidian",
+    },
+    "ur": {
+        "name": "Urdu",
+        "native": "اُردُو",
+        "supported": True,
+        "asr_supported": True,
+        "translation_supported": True,
+        "family": "Indo-Aryan",
     },
 }
 
@@ -71,24 +235,28 @@ def get_pipeline_config(source_lang: str) -> dict:
         if source_lang in _config_cache:
             return _config_cache[source_lang]
 
-    payload = {
-        "pipelineTasks": [
-            {
-                "taskType": "asr",
-                "config": {
-                    "language": {"sourceLanguage": source_lang}
-                }
-            },
-            {
-                "taskType": "translation",
-                "config": {
-                    "language": {
-                        "sourceLanguage": source_lang,
-                        "targetLanguage": "en"
-                    }
+    tasks = []
+    lang_info = LANGUAGES.get(source_lang, {})
+    if lang_info.get("asr_supported", True):
+        tasks.append({
+            "taskType": "asr",
+            "config": {
+                "language": {"sourceLanguage": source_lang}
+            }
+        })
+    if lang_info.get("translation_supported", True):
+        tasks.append({
+            "taskType": "translation",
+            "config": {
+                "language": {
+                    "sourceLanguage": source_lang,
+                    "targetLanguage": "en"
                 }
             }
-        ],
+        })
+
+    payload = {
+        "pipelineTasks": tasks,
         "pipelineRequestConfig": {
             "pipelineId": PIPELINE_ID
         }
@@ -122,22 +290,26 @@ def get_pipeline_config(source_lang: str) -> dict:
             (t for t in task_configs if t["taskType"] == "translation"), None
         )
 
-        if asr_cfg is None:
-            raise RuntimeError(
-                f"No ASR config returned for language '{source_lang}'. "
-                f"Supported: {', '.join(SUPPORTED_CODES)}"
-            )
-        if nmt_cfg is None:
-            raise RuntimeError(
-                f"No NMT config returned for language '{source_lang}'."
-            )
+        asr_service_id = None
+        if lang_info.get("asr_supported", True):
+            if asr_cfg is None:
+                raise RuntimeError(
+                    f"No ASR config returned for language '{source_lang}'."
+                )
+            asr_service_id = asr_cfg["config"][0]["serviceId"]
+
+        nmt_service_id = None
+        if lang_info.get("translation_supported", True):
+            if nmt_cfg is None:
+                raise RuntimeError(
+                    f"No NMT config returned for language '{source_lang}'."
+                )
+            nmt_service_id = nmt_cfg["config"][0]["serviceId"]
 
         endpoint       = data["pipelineInferenceAPIEndPoint"]
         callback_url   = endpoint["callbackUrl"]
         auth_key_name  = endpoint["inferenceApiKey"]["name"]
         auth_key_value = endpoint["inferenceApiKey"]["value"]
-        asr_service_id = asr_cfg["config"][0]["serviceId"]
-        nmt_service_id = nmt_cfg["config"][0]["serviceId"]
 
     except (KeyError, IndexError) as e:
         raise RuntimeError(
@@ -176,28 +348,35 @@ def transcribe_and_translate(
     """
     config = get_pipeline_config(source_lang)
 
-    payload = {
-        "pipelineTasks": [
-            {
-                "taskType": "asr",
-                "config": {
-                    "language":     {"sourceLanguage": source_lang},
-                    "serviceId":    config["asr_service_id"],
-                    "audioFormat":  "wav",
-                    "samplingRate": SAMPLE_RATE,
-                }
-            },
-            {
-                "taskType": "translation",
-                "config": {
-                    "language": {
-                        "sourceLanguage": source_lang,
-                        "targetLanguage": "en"
-                    },
-                    "serviceId": config["nmt_service_id"],
-                }
+    if not config.get("asr_service_id"):
+        raise RuntimeError(f"Speech recognition is not supported for {LANGUAGES.get(source_lang, {}).get('name', source_lang)}.")
+
+    tasks = [
+        {
+            "taskType": "asr",
+            "config": {
+                "language":     {"sourceLanguage": source_lang},
+                "serviceId":    config["asr_service_id"],
+                "audioFormat":  "wav",
+                "samplingRate": SAMPLE_RATE,
             }
-        ],
+        }
+    ]
+
+    if config.get("nmt_service_id"):
+        tasks.append({
+            "taskType": "translation",
+            "config": {
+                "language": {
+                    "sourceLanguage": source_lang,
+                    "targetLanguage": "en"
+                },
+                "serviceId": config["nmt_service_id"],
+            }
+        })
+
+    payload = {
+        "pipelineTasks": tasks,
         "inputData": {
             "audio": [{"audioContent": audio_b64_wav}],
         }
@@ -255,14 +434,24 @@ def transcribe_and_translate(
             (r for r in responses if r["taskType"] == "translation"), None
         )
 
-        if asr_out is None or nmt_out is None:
+        if asr_out is None:
             raise RuntimeError(
-                f"Missing ASR or NMT block in response.\n"
+                f"Missing ASR block in response.\n"
                 f"Raw:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
             )
 
-        transcript  = asr_out["output"][0]["source"]
-        translation = nmt_out["output"][0]["target"]
+        transcript = asr_out["output"][0]["source"]
+        
+        if config.get("nmt_service_id"):
+            if nmt_out is None:
+                raise RuntimeError(
+                    f"Missing NMT block in response.\n"
+                    f"Raw:\n{json.dumps(data, indent=2, ensure_ascii=False)}"
+                )
+            translation = nmt_out["output"][0]["target"]
+        else:
+            translation = transcript
+
         return transcript.strip(), translation.strip()
 
     except (KeyError, IndexError) as e:
@@ -288,7 +477,12 @@ def translate_text(text: str, source_lang: str, target_lang: str = "en") -> str:
     if not text.strip():
         raise ValueError("Input text cannot be empty.")
 
+    if source_lang == target_lang:
+        return text
+
     config = get_pipeline_config(source_lang)
+    if not config.get("nmt_service_id"):
+        return text
 
     payload = {
         "pipelineTasks": [
