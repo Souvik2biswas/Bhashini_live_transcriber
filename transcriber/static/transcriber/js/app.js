@@ -32,6 +32,8 @@
     let isRecording = false;
     let selectedLang = 'ta';
     let chunkInterval = null;
+    let activeTreeTab = 'indo-aryan';
+    let currentViewMode = 'grid';
 
     // Stats
     let stats = {
@@ -65,6 +67,10 @@
         textInput:       $('textInput'),
         translateBtn:    $('translateBtn'),
         textOutput:      $('textOutput'),
+        languageTreeContainer: $('languageTreeContainer'),
+        treeViewport:    $('treeViewport'),
+        treeTabs:        $('treeTabs'),
+        viewToggle:      $('viewToggle'),
     };
 
 
@@ -162,6 +168,7 @@
         switch (msg.type) {
             case 'languages':
                 renderLanguageGrid(msg.languages);
+                renderLanguageTree(activeTreeTab);
                 break;
 
             case 'config_ready':
@@ -508,6 +515,326 @@
         updateMicrophoneState();
     }
 
+    // ─── SVG Language Tree Data ──────────────────────────────────────────────────
+    const INDO_ARYAN_TREE = {
+        nodes: {
+            vedic_sanskrit: { x: 450, y: 50, label: "Vedic Sanskrit", type: "ancient", color: "#EF4444" },
+            sanskrit: { x: 580, y: 50, label: "Sanskrit", code: "sa", type: "supported", color: "#F59E0B" },
+            prakrit: { x: 500, y: 150, label: "Prakrit", type: "ancient", color: "#EC4899" },
+            elu: { x: 250, y: 100, label: "Elu", type: "intermediate", color: "#4B5563" },
+            dhivehi: { x: 150, y: 100, label: "Dhivehi", type: "unsupported", color: "#4B5563" },
+            sinhala: { x: 300, y: 50, label: "Sinhala", type: "unsupported", color: "#4B5563" },
+            vedda: { x: 220, y: 40, label: "Vedda", type: "unsupported", color: "#4B5563" },
+            maharashtri: { x: 220, y: 200, label: "Maharashtri", type: "intermediate", color: "#0EA5E9" },
+            marathi: { x: 120, y: 170, label: "Marathi", code: "mr", type: "supported", color: "#0EA5E9" },
+            konkani: { x: 120, y: 230, label: "Konkani", code: "gom", type: "supported", color: "#0EA5E9" },
+            pali: { x: 350, y: 240, label: "Pali", type: "ancient", color: "#10B981" },
+            gandhari: { x: 620, y: 240, label: "Gandhari", type: "ancient", color: "#9CA3AF" },
+            shauraseni: { x: 500, y: 260, label: "Shauraseni", type: "ancient", color: "#F97316" },
+            north_indic: { x: 180, y: 320, label: "North Indic", type: "intermediate", color: "#EF4444" },
+            dogri: { x: 200, y: 260, label: "Dogri", code: "doi", type: "supported", color: "#EF4444" },
+            punjabi: { x: 100, y: 320, label: "Punjabi", code: "pa", type: "supported", color: "#EF4444" },
+            sindhi: { x: 160, y: 380, label: "Sindhi", code: "sd", type: "supported", color: "#EF4444" },
+            west_indic: { x: 250, y: 450, label: "West Indic", type: "intermediate", color: "#0EA5E9" },
+            gujarati: { x: 250, y: 530, label: "Gujarati", code: "gu", type: "supported", color: "#0EA5E9" },
+            marwari: { x: 170, y: 500, label: "Marwari", type: "unsupported", color: "#0EA5E9" },
+            romani: { x: 320, y: 500, label: "Romani", type: "unsupported", color: "#0EA5E9" },
+            dardic: { x: 420, y: 350, label: "Dardic", type: "intermediate", color: "#4B5563" },
+            kashmiri: { x: 350, y: 380, label: "Kashmiri", code: "ks", type: "supported", color: "#4B5563" },
+            shina: { x: 420, y: 420, label: "Shina", type: "unsupported", color: "#4B5563" },
+            pahari: { x: 580, y: 360, label: "Pahari", type: "intermediate", color: "#10B981" },
+            nepali: { x: 540, y: 420, label: "Nepali", code: "ne", type: "supported", color: "#10B981" },
+            kumaoni: { x: 650, y: 340, label: "Kumaoni", type: "unsupported", color: "#10B981" },
+            garhwali: { x: 620, y: 420, label: "Garhwali", type: "unsupported", color: "#10B981" },
+            hindustani: { x: 800, y: 320, label: "Hindustani", type: "intermediate", color: "#F59E0B" },
+            hindi: { x: 740, y: 380, label: "Hindi", code: "hi", type: "supported", color: "#F59E0B" },
+            urdu: { x: 860, y: 380, label: "Urdu", code: "ur", type: "supported", color: "#F59E0B" },
+            haryanvi: { x: 690, y: 440, label: "Haryanvi", type: "unsupported", color: "#F59E0B" },
+            rekhta: { x: 800, y: 440, label: "Rekhta", type: "unsupported", color: "#F59E0B" },
+            dakhini: { x: 910, y: 440, label: "Dakhini", type: "unsupported", color: "#F59E0B" },
+            magadhi: { x: 800, y: 130, label: "Magadhi", type: "intermediate", color: "#10B981" },
+            odia: { x: 880, y: 70, label: "Odia", code: "or", type: "supported", color: "#10B981" },
+            bangla: { x: 910, y: 120, label: "Bangla", code: "bn", type: "supported", color: "#10B981" },
+            assamese: { x: 880, y: 170, label: "Assamese", code: "as", type: "supported", color: "#10B981" },
+            bihari: { x: 780, y: 190, label: "Bihari", type: "intermediate", color: "#065F46" },
+            bhojpuri: { x: 700, y: 190, label: "Bhojpuri", type: "unsupported", color: "#065F46" },
+            maithili: { x: 760, y: 250, label: "Maithili", code: "mai", type: "supported", color: "#065F46" },
+            magahi: { x: 830, y: 220, label: "Magahi", type: "unsupported", color: "#065F46" }
+        },
+        links: [
+            { from: "vedic_sanskrit", to: "prakrit" },
+            { from: "vedic_sanskrit", to: "sanskrit" },
+            { from: "prakrit", to: "elu" },
+            { from: "prakrit", to: "maharashtri" },
+            { from: "prakrit", to: "pali" },
+            { from: "prakrit", to: "shauraseni" },
+            { from: "prakrit", to: "gandhari" },
+            { from: "prakrit", to: "magadhi" },
+            { from: "elu", to: "dhivehi" },
+            { from: "elu", to: "sinhala" },
+            { from: "elu", to: "vedda" },
+            { from: "maharashtri", to: "marathi" },
+            { from: "maharashtri", to: "konkani" },
+            { from: "shauraseni", to: "north_indic" },
+            { from: "shauraseni", to: "west_indic" },
+            { from: "shauraseni", to: "dardic" },
+            { from: "shauraseni", to: "pahari" },
+            { from: "shauraseni", to: "hindustani" },
+            { from: "north_indic", to: "dogri" },
+            { from: "north_indic", to: "punjabi" },
+            { from: "north_indic", to: "sindhi" },
+            { from: "west_indic", to: "marwari" },
+            { from: "west_indic", to: "gujarati" },
+            { from: "west_indic", to: "romani" },
+            { from: "dardic", to: "kashmiri" },
+            { from: "dardic", to: "shina" },
+            { from: "pahari", to: "nepali" },
+            { from: "pahari", to: "kumaoni" },
+            { from: "pahari", to: "garhwali" },
+            { from: "hindustani", to: "hindi" },
+            { from: "hindustani", to: "urdu" },
+            { from: "hindi", to: "haryanvi" },
+            { from: "urdu", to: "rekhta" },
+            { from: "urdu", to: "dakhini" },
+            { from: "magadhi", to: "odia" },
+            { from: "magadhi", to: "bangla" },
+            { from: "magadhi", to: "assamese" },
+            { from: "magadhi", to: "bihari" },
+            { from: "bihari", to: "bhojpuri" },
+            { from: "bihari", to: "maithili" },
+            { from: "bihari", to: "magahi" }
+        ]
+    };
+
+    const DRAVIDIAN_TREE = {
+        nodes: {
+            proto_dravidian: { x: 500, y: 70, label: "Proto Dravidian", type: "ancient", color: "#1F2937" },
+            central_dravidian: { x: 300, y: 150, label: "Central Dravidian", type: "intermediate", color: "#065F46" },
+            parji: { x: 180, y: 100, label: "Parji", type: "unsupported", color: "#065F46" },
+            kolami: { x: 130, y: 150, label: "Kolami", type: "unsupported", color: "#065F46" },
+            naiki: { x: 180, y: 200, label: "Naiki", type: "unsupported", color: "#065F46" },
+            manda: { x: 360, y: 200, label: "Manda", type: "unsupported", color: "#065F46" },
+            kui: { x: 340, y: 260, label: "Kui", type: "unsupported", color: "#065F46" },
+            gondi: { x: 280, y: 290, label: "Gondi", type: "unsupported", color: "#065F46" },
+            koraga: { x: 200, y: 280, label: "Koraga", type: "unsupported", color: "#065F46" },
+            telugu: { x: 120, y: 240, label: "Telugu", code: "te", type: "supported", color: "#16A34A" },
+            northern_dravidian: { x: 700, y: 150, label: "Northern Dravidian", type: "intermediate", color: "#9D174D" },
+            kurukh: { x: 800, y: 110, label: "Kurukh", type: "unsupported", color: "#9D174D" },
+            malto: { x: 830, y: 170, label: "Malto", type: "unsupported", color: "#9D174D" },
+            brahui: { x: 740, y: 230, label: "Brahui", type: "unsupported", color: "#9D174D" },
+            southern_dravidian: { x: 500, y: 230, label: "Southern Dravidian", type: "intermediate", color: "#1E3A8A" },
+            tulu: { x: 650, y: 230, label: "Tulu", type: "unsupported", color: "#1D4ED8" },
+            tamil_kannada: { x: 500, y: 320, label: "Tamil-Kannada", type: "intermediate", color: "#1D4ED8" },
+            toda: { x: 200, y: 370, label: "Toda", type: "unsupported", color: "#1D4ED8" },
+            kota: { x: 200, y: 440, label: "Kota", type: "unsupported", color: "#1D4ED8" },
+            kannada: { x: 800, y: 370, label: "Kannada", code: "kn", type: "supported", color: "#1D4ED8" },
+            kodagu: { x: 800, y: 440, label: "Kodagu", type: "unsupported", color: "#1D4ED8" },
+            irula: { x: 620, y: 480, label: "Irula", type: "unsupported", color: "#1D4ED8" },
+            malayalam: { x: 380, y: 480, label: "Malayalam", code: "ml", type: "supported", color: "#1D4ED8" },
+            tamil: { x: 500, y: 480, label: "Tamil", code: "ta", type: "supported", color: "#1D4ED8" }
+        },
+        links: [
+            { from: "proto_dravidian", to: "central_dravidian" },
+            { from: "proto_dravidian", to: "northern_dravidian" },
+            { from: "proto_dravidian", to: "southern_dravidian" },
+            { from: "central_dravidian", to: "parji" },
+            { from: "central_dravidian", to: "kolami" },
+            { from: "central_dravidian", to: "naiki" },
+            { from: "central_dravidian", to: "manda" },
+            { from: "central_dravidian", to: "kui" },
+            { from: "central_dravidian", to: "gondi" },
+            { from: "central_dravidian", to: "koraga" },
+            { from: "central_dravidian", to: "telugu" },
+            { from: "northern_dravidian", to: "kurukh" },
+            { from: "northern_dravidian", to: "malto" },
+            { from: "northern_dravidian", to: "brahui" },
+            { from: "southern_dravidian", to: "tamil_kannada" },
+            { from: "southern_dravidian", to: "tulu" },
+            { from: "tamil_kannada", to: "toda" },
+            { from: "tamil_kannada", to: "kota" },
+            { from: "tamil_kannada", to: "kannada" },
+            { from: "tamil_kannada", to: "kodagu" },
+            { from: "tamil_kannada", to: "irula" },
+            { from: "tamil_kannada", to: "malayalam" },
+            { from: "tamil_kannada", to: "tamil" }
+        ]
+    };
+
+    const SINO_TIBETAN_TREE = {
+        nodes: {
+            proto_sino_tibetan: { x: 500, y: 100, label: "Proto-Sino-Tibetan", type: "ancient", color: "#1F2937" },
+            bodo: { x: 400, y: 250, label: "Bodo", code: "brx", type: "supported", color: "#8B5CF6" },
+            manipuri: { x: 600, y: 250, label: "Manipuri", code: "mni", type: "supported", color: "#8B5CF6" }
+        },
+        links: [
+            { from: "proto_sino_tibetan", to: "bodo" },
+            { from: "proto_sino_tibetan", to: "manipuri" }
+        ]
+    };
+
+    const AUSTROASIATIC_TREE = {
+        nodes: {
+            proto_austroasiatic: { x: 500, y: 100, label: "Proto-Austroasiatic", type: "ancient", color: "#1F2937" },
+            santali: { x: 500, y: 250, label: "Santali", code: "sat", type: "supported", color: "#EC4899" }
+        },
+        links: [
+            { from: "proto_austroasiatic", to: "santali" }
+        ]
+    };
+
+    const TREE_DATA = {
+        "indo-aryan": INDO_ARYAN_TREE,
+        "dravidian": DRAVIDIAN_TREE,
+        "sino-tibetan": SINO_TIBETAN_TREE,
+        "austroasiatic": AUSTROASIATIC_TREE
+    };
+
+    function renderLanguageTree(familyId) {
+        if (!dom.treeViewport) return;
+        dom.treeViewport.innerHTML = '';
+
+        const tree = TREE_DATA[familyId];
+        if (!tree) return;
+
+        const isSmall = familyId === 'sino-tibetan' || familyId === 'austroasiatic';
+        const height = isSmall ? 380 : 580;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', `0 0 1000 ${height}`);
+        svg.className.baseVal = isSmall ? 'tree-svg small-tree' : 'tree-svg';
+
+        // Draw links
+        tree.links.forEach(link => {
+            const fromNode = tree.nodes[link.from];
+            const toNode = tree.nodes[link.to];
+            if (!fromNode || !toNode) return;
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const midY = (fromNode.y + toNode.y) / 2;
+            const d = `M ${fromNode.x} ${fromNode.y} C ${fromNode.x} ${midY}, ${toNode.x} ${midY}, ${toNode.x} ${toNode.y}`;
+            path.setAttribute('d', d);
+            path.className.baseVal = 'tree-link';
+
+            if (fromNode.type === 'supported' && toNode.type === 'supported') {
+                path.classList.add('highlighted');
+            }
+
+            svg.appendChild(path);
+        });
+
+        // Draw nodes
+        Object.entries(tree.nodes).forEach(([id, node]) => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.className.baseVal = `tree-node ${node.type}`;
+            if (node.code) {
+                g.setAttribute('data-lang', node.code);
+                if (node.code === selectedLang) {
+                    g.classList.add('active');
+                }
+            }
+
+            const isSupported = node.type === 'supported' && node.code;
+            const radius = isSupported ? 22 : (node.type === 'unsupported' ? 16 : 18);
+
+            // Node circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', node.x);
+            circle.setAttribute('cy', node.y);
+            circle.setAttribute('r', radius);
+            circle.className.baseVal = 'node-circle';
+            circle.style.fill = node.color;
+            circle.style.stroke = node.color;
+            circle.style.setProperty('--hover-shadow', `${node.color}99`);
+            circle.style.setProperty('--active-shadow', node.color);
+
+            g.appendChild(circle);
+
+            // Readability halo
+            const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textBg.setAttribute('x', node.x);
+            textBg.setAttribute('y', node.y + radius + 15);
+            textBg.className.baseVal = 'node-label-bg';
+            textBg.textContent = node.label;
+            g.appendChild(textBg);
+
+            // Foreground label
+            const textFg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textFg.setAttribute('x', node.x);
+            textFg.setAttribute('y', node.y + radius + 15);
+            textFg.className.baseVal = 'node-label-text';
+            textFg.textContent = node.label;
+            g.appendChild(textFg);
+
+            // Text only tag
+            if (isSupported && supportedLanguages[node.code] && !supportedLanguages[node.code].asr_supported) {
+                const badgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const badgeW = 60;
+                const badgeH = 13;
+                const badgeX = node.x - badgeW / 2;
+                const badgeY = node.y + radius + 22;
+
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', badgeX);
+                rect.setAttribute('y', badgeY);
+                rect.setAttribute('width', badgeW);
+                rect.setAttribute('height', badgeH);
+                rect.className.baseVal = 'node-tag-rect';
+
+                const badgeTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                badgeTxt.setAttribute('x', node.x);
+                badgeTxt.setAttribute('y', badgeY + 9);
+                badgeTxt.className.baseVal = 'node-tag-text';
+                badgeTxt.textContent = 'TEXT ONLY';
+
+                badgeGroup.appendChild(rect);
+                badgeGroup.appendChild(badgeTxt);
+                g.appendChild(badgeGroup);
+            }
+
+            if (isSupported) {
+                g.addEventListener('click', () => {
+                    if (selectedLang === node.code) return;
+
+                    selectedLang = node.code;
+
+                    // Sync SVGs
+                    document.querySelectorAll('.tree-node').forEach(nodeEl => {
+                        if (nodeEl.getAttribute('data-lang') === selectedLang) {
+                            nodeEl.classList.add('active');
+                        } else {
+                            nodeEl.classList.remove('active');
+                        }
+                    });
+
+                    // Sync Grid cards
+                    document.querySelectorAll('.lang-card').forEach(c => {
+                        if (c.dataset.lang === selectedLang) {
+                            c.classList.add('active');
+                        } else {
+                            c.classList.remove('active');
+                        }
+                    });
+
+                    sendConfig(selectedLang);
+                    updateMicrophoneState();
+
+                    if (isRecording) {
+                        stopRecording();
+                        setTimeout(() => {
+                            if (supportedLanguages[selectedLang]?.asr_supported) {
+                                startRecording();
+                            }
+                        }, 500);
+                    }
+                });
+            }
+
+            svg.appendChild(g);
+        });
+
+        dom.treeViewport.appendChild(svg);
+    }
+
     function updateMicrophoneState() {
         const langConfig = supportedLanguages[selectedLang];
         const btn = dom.recordBtn;
@@ -704,6 +1031,43 @@
                 applyActiveFilter();
             });
         });
+
+        // View Toggle (Grid vs. Tree)
+        if (dom.viewToggle) {
+            dom.viewToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    dom.viewToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    currentViewMode = btn.dataset.view;
+                    const familyFiltersEl = document.getElementById('familyFilters');
+
+                    if (currentViewMode === 'tree') {
+                        dom.languageGrid.classList.add('hidden');
+                        if (familyFiltersEl) familyFiltersEl.classList.add('hidden');
+                        dom.languageTreeContainer.classList.remove('hidden');
+                        renderLanguageTree(activeTreeTab);
+                    } else {
+                        dom.languageTreeContainer.classList.add('hidden');
+                        dom.languageGrid.classList.remove('hidden');
+                        if (familyFiltersEl) familyFiltersEl.classList.remove('hidden');
+                    }
+                });
+            });
+        }
+
+        // Tree Tab Switcher
+        if (dom.treeTabs) {
+            dom.treeTabs.querySelectorAll('.tree-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    dom.treeTabs.querySelectorAll('.tree-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    activeTreeTab = tab.dataset.tab;
+                    renderLanguageTree(activeTreeTab);
+                });
+            });
+        }
 
         // Connect WebSocket
         connectWebSocket();

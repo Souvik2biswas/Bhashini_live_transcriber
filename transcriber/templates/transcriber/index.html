@@ -58,8 +58,41 @@
 
         <!-- ═══ Language Selector ═══ -->
         <section class="language-section">
-            <h2 class="section-label">Select Source Language</h2>
+            <div class="language-section-header">
+                <h2 class="section-label">Select Source Language</h2>
+                <div class="view-toggle" id="viewToggle">
+                    <button class="toggle-btn active" data-view="grid" id="btnViewGrid">
+                        <svg class="toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <span>Card Grid</span>
+                    </button>
+                    <button class="toggle-btn" data-view="tree" id="btnViewTree">
+                        <svg class="toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8M12 10l-4 4M12 10l4 4M8 14H4M16 14h4M4 14v4M20 14v4"></path></svg>
+                        <span>Interactive Tree</span>
+                    </button>
+                </div>
+            </div>
             
+            <!-- Interactive Language Trees (Hidden by default) -->
+            <div class="language-tree-container hidden" id="languageTreeContainer">
+                <div class="tree-tabs" id="treeTabs">
+                    <button class="tree-tab active" data-tab="indo-aryan">Indo-Aryan Branch</button>
+                    <button class="tree-tab" data-tab="dravidian">Dravidian Family</button>
+                    <button class="tree-tab" data-tab="sino-tibetan">Sino-Tibetan Family</button>
+                    <button class="tree-tab" data-tab="austroasiatic">Austroasiatic Family</button>
+                </div>
+                
+                <div class="tree-viewport-wrapper">
+                    <!-- Tree SVGs will be dynamically rendered here -->
+                    <div class="tree-viewport" id="treeViewport"></div>
+                </div>
+                
+                <div class="tree-legend">
+                    <div class="legend-item"><span class="legend-dot ancestral"></span> Ancestral / Intermediate (Not Supported)</div>
+                    <div class="legend-item"><span class="legend-dot supported"></span> Supported Language (Click to Select)</div>
+                    <div class="legend-item"><span class="legend-dot text-only"></span> Text Only Support</div>
+                </div>
+            </div>
+
             <!-- Category Filter Pills -->
             <div class="family-filters" id="familyFilters">
                 <button class="filter-pill active" data-family="all">All</button>

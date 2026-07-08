@@ -966,3 +966,301 @@ body::before {
     height: 1px;
     background: var(--border-glass);
 }
+
+/* ─── Language Section Header & View Toggle ─── */
+.language-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.language-section-header .section-label {
+    margin-bottom: 0;
+}
+
+.view-toggle {
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    padding: 3px;
+    border-radius: 30px;
+}
+
+.toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+}
+
+.toggle-btn:hover {
+    color: var(--text-primary);
+}
+
+.toggle-btn.active {
+    background: var(--accent-indigo);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.toggle-icon {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.5;
+}
+
+/* ─── Language Tree Container & Tabs ─── */
+.language-tree-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.35s var(--ease-out);
+}
+
+.language-tree-container.hidden {
+    display: none !important;
+}
+
+.tree-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-glass);
+    padding-bottom: 16px;
+}
+
+.tree-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-out);
+}
+
+.tree-tab:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.tree-tab.active {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: var(--text-primary);
+}
+
+/* ─── SVG Tree Viewport ─── */
+.tree-viewport-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: rgba(10, 10, 15, 0.4);
+    border-radius: 12px;
+    border: 1px solid var(--border-glass);
+    padding: 16px;
+    margin-bottom: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.tree-viewport-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.tree-viewport-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.tree-viewport {
+    min-width: 950px;
+    display: flex;
+    justify-content: center;
+}
+
+.tree-svg {
+    width: 1000px;
+    height: 580px;
+    display: block;
+    overflow: visible;
+}
+
+.tree-svg.small-tree {
+    height: 380px;
+}
+
+/* SVG Elements Styling */
+.tree-link {
+    stroke: rgba(255, 255, 255, 0.12);
+    stroke-width: 2.5;
+    fill: none;
+    transition: stroke 0.3s var(--ease-out);
+}
+
+.tree-link.highlighted {
+    stroke: rgba(99, 102, 241, 0.5);
+    stroke-width: 3.5;
+}
+
+.tree-node {
+    cursor: default;
+}
+
+.tree-node.supported {
+    cursor: pointer;
+}
+
+.node-circle {
+    stroke-width: 2px;
+    transition: all 0.3s var(--ease-out);
+    transform-origin: center;
+}
+
+.tree-node.supported .node-circle {
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+}
+
+.tree-node.supported:hover .node-circle {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 10px var(--hover-shadow, rgba(99, 102, 241, 0.6)));
+    stroke-width: 3px;
+}
+
+.tree-node.active .node-circle {
+    stroke: #ffffff !important;
+    stroke-width: 3.5px;
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 12px var(--active-shadow, rgba(99, 102, 241, 0.8)));
+}
+
+.tree-node.unsupported .node-circle,
+.tree-node.ancient .node-circle,
+.tree-node.intermediate .node-circle {
+    opacity: 0.5;
+    stroke: #4B5563 !important;
+    fill: #1F2937 !important;
+}
+
+.tree-node.unsupported:hover .node-circle,
+.tree-node.ancient:hover .node-circle,
+.tree-node.intermediate:hover .node-circle {
+    opacity: 0.7;
+}
+
+/* Node text labeling */
+.node-label-bg {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-anchor: middle;
+    fill: var(--bg-body);
+    stroke: var(--bg-body);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    opacity: 0.85;
+}
+
+.node-label-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-anchor: middle;
+    fill: var(--text-secondary);
+    transition: fill 0.25s var(--ease-out);
+    pointer-events: none;
+}
+
+.tree-node.supported .node-label-text {
+    fill: var(--text-primary);
+    font-weight: 600;
+}
+
+.tree-node.active .node-label-text {
+    fill: #ffffff;
+    font-weight: 700;
+}
+
+/* Text tag for non-ASR supported nodes */
+.node-tag-rect {
+    fill: rgba(0, 0, 0, 0.6);
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 1px;
+    rx: 3px;
+}
+
+.node-tag-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-anchor: middle;
+    fill: var(--text-secondary);
+}
+
+/* ─── Legend ─── */
+.tree-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-top: 1px solid var(--border-glass);
+    padding-top: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.ancestral {
+    background: #1F2937;
+    border: 1.5px solid #4B5563;
+}
+
+.legend-dot.supported {
+    background: var(--accent-indigo);
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
+}
+
+.legend-dot.text-only {
+    background: #10B981;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .language-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
