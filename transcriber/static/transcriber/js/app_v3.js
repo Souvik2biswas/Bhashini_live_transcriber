@@ -662,13 +662,23 @@
 
     const SINO_TIBETAN_TREE = {
         nodes: {
-            proto_sino_tibetan: { x: 500, y: 100, label: "Proto-Sino-Tibetan", type: "ancient", color: "#1F2937" },
-            bodo: { x: 400, y: 250, label: "Bodo", code: "brx", type: "supported", color: "#8B5CF6" },
-            manipuri: { x: 600, y: 250, label: "Manipuri", code: "mni", type: "supported", color: "#8B5CF6" }
+            sino_tibetan: { x: 500, y: 60, label: "Sino-Tibetan", type: "ancient", color: "#1F2937" },
+            tibeto_burman: { x: 500, y: 150, label: "Tibeto-Burman", type: "intermediate", color: "#6D28D9" },
+            sal_brahmaputran: { x: 300, y: 250, label: "Sal / Brahmaputran", type: "intermediate", color: "#7C3AED" },
+            meitei_branch: { x: 700, y: 250, label: "Meitei Branch", type: "intermediate", color: "#A855F7" },
+            boro_garo: { x: 300, y: 340, label: "Boro-Garo", type: "intermediate", color: "#7C3AED" },
+            boroic: { x: 300, y: 430, label: "Boroic", type: "intermediate", color: "#7C3AED" },
+            bodo: { x: 300, y: 520, label: "Bodo", code: "brx", type: "supported", color: "#8B5CF6" },
+            manipuri: { x: 700, y: 350, label: "Manipuri", code: "mni", type: "supported", color: "#A855F7" }
         },
         links: [
-            { from: "proto_sino_tibetan", to: "bodo" },
-            { from: "proto_sino_tibetan", to: "manipuri" }
+            { from: "sino_tibetan", to: "tibeto_burman" },
+            { from: "tibeto_burman", to: "sal_brahmaputran" },
+            { from: "tibeto_burman", to: "meitei_branch" },
+            { from: "sal_brahmaputran", to: "boro_garo" },
+            { from: "boro_garo", to: "boroic" },
+            { from: "boroic", to: "bodo" },
+            { from: "meitei_branch", to: "manipuri" }
         ]
     };
 
@@ -696,7 +706,7 @@
         const tree = TREE_DATA[familyId];
         if (!tree) return;
 
-        const isSmall = familyId === 'sino-tibetan' || familyId === 'austroasiatic';
+        const isSmall = familyId === 'austroasiatic';
         const height = isSmall ? 380 : 580;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
