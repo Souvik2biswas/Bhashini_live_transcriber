@@ -1130,7 +1130,6 @@ body::before {
 .node-circle {
     stroke-width: 2px;
     transition: all 0.3s var(--ease-out);
-    transform-origin: center;
 }
 
 .tree-node.supported .node-circle {
@@ -1138,7 +1137,6 @@ body::before {
 }
 
 .tree-node.supported:hover .node-circle {
-    transform: scale(1.15);
     filter: drop-shadow(0 0 10px var(--hover-shadow, rgba(99, 102, 241, 0.6)));
     stroke-width: 3px;
 }
@@ -1146,7 +1144,6 @@ body::before {
 .tree-node.active .node-circle {
     stroke: #ffffff !important;
     stroke-width: 3.5px;
-    transform: scale(1.15);
     filter: drop-shadow(0 0 12px var(--active-shadow, rgba(99, 102, 241, 0.8)));
 }
 
