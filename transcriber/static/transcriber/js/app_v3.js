@@ -684,11 +684,17 @@
 
     const AUSTROASIATIC_TREE = {
         nodes: {
-            proto_austroasiatic: { x: 500, y: 100, label: "Proto-Austroasiatic", type: "ancient", color: "#1F2937" },
-            santali: { x: 500, y: 250, label: "Santali", code: "sat", type: "supported", color: "#EC4899" }
+            austroasiatic: { x: 500, y: 60, label: "Austroasiatic", type: "ancient", color: "#1F2937" },
+            munda: { x: 500, y: 170, label: "Munda", type: "intermediate", color: "#BE185D" },
+            north_munda: { x: 500, y: 280, label: "North Munda", type: "intermediate", color: "#DB2777" },
+            kherwarian: { x: 500, y: 390, label: "Kherwarian", type: "intermediate", color: "#EC4899" },
+            santali: { x: 500, y: 500, label: "Santali", code: "sat", type: "supported", color: "#EC4899" }
         },
         links: [
-            { from: "proto_austroasiatic", to: "santali" }
+            { from: "austroasiatic", to: "munda" },
+            { from: "munda", to: "north_munda" },
+            { from: "north_munda", to: "kherwarian" },
+            { from: "kherwarian", to: "santali" }
         ]
     };
 
@@ -706,12 +712,11 @@
         const tree = TREE_DATA[familyId];
         if (!tree) return;
 
-        const isSmall = familyId === 'austroasiatic';
-        const height = isSmall ? 380 : 580;
+        const height = 580;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 1000 ${height}`);
-        svg.className.baseVal = isSmall ? 'tree-svg small-tree' : 'tree-svg';
+        svg.className.baseVal = 'tree-svg';
 
         // Draw links
         tree.links.forEach(link => {
