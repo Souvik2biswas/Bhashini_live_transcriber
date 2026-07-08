@@ -1166,35 +1166,28 @@ body::before {
 
 /* Node text labeling */
 .node-label-bg {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-anchor: middle;
-    fill: var(--bg-body);
-    stroke: var(--bg-body);
-    stroke-width: 4px;
-    stroke-linejoin: round;
-    opacity: 0.85;
+    display: none; /* Background halo not needed when text is inside solid bubbles */
 }
 
 .node-label-text {
     font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.68rem;
+    font-weight: 600;
     text-anchor: middle;
-    fill: var(--text-secondary);
+    dominant-baseline: central;
+    fill: #ffffff;
     transition: fill 0.25s var(--ease-out);
     pointer-events: none;
 }
 
 .tree-node.supported .node-label-text {
-    fill: var(--text-primary);
-    font-weight: 600;
+    fill: #ffffff;
+    font-weight: 700;
 }
 
 .tree-node.active .node-label-text {
     fill: #ffffff;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 /* Text tag for non-ASR supported nodes */
