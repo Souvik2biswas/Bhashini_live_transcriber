@@ -10,42 +10,11 @@ import io
 import base64
 import struct
 import math
+import numpy as np
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
 SAMPLE_WIDTH = 2  # 16-bit = 2 bytes
-
-
-def compute_rms_from_wav_b64(wav_b64: str) -> float:
-    """
-    Computes RMS energy from a base64-encoded WAV string.
-    Used for silence detection — chunks below a threshold are skipped.
-
-    Args:
-        wav_b64: Base64-encoded WAV string (16-bit PCM).
-
-    Returns:
-        RMS energy as a float.
-    """
-    wav_bytes = base64.b64decode(wav_b64)
-
-    # Skip WAV header (44 bytes for standard PCM WAV)
-    pcm_data = wav_bytes[44:]
-
-    if len(pcm_data) < 2:
-        return 0.0
-
-    # Unpack 16-bit signed integers
-    n_samples = len(pcm_data) // 2
-    samples = struct.unpack(f"<{n_samples}h", pcm_data[:n_samples * 2])
-
-    if not samples:
-        return 0.0
-
-    # RMS calculation
-    sum_sq = sum(s * s for s in samples)
-    return math.sqrt(sum_sq / n_samples)
-
 
 
 def pcm_to_wav_base64(pcm_bytes: bytes, sample_rate: int = 16000) -> str:
@@ -77,14 +46,14 @@ def pcm_to_wav_base64(pcm_bytes: bytes, sample_rate: int = 16000) -> str:
 
 def compute_rms_pcm(pcm_bytes: bytes) -> float:
     """
-    Computes RMS energy directly from raw signed 16-bit PCM bytes.
-    Does not require pydub or ffmpeg.
+    Computes RMS energy directly from raw signed 16-bit PCM bytes using numpy.
     """
     if len(pcm_bytes) < 2:
         return 0.0
-    n_samples = len(pcm_bytes) // 2
-    # Unpack PCM little-endian signed 16-bit short integers
-    samples = struct.unpack(f"<{n_samples}h", pcm_bytes[:n_samples * 2])
-    sum_sq = sum(s * s for s in samples)
-    return math.sqrt(sum_sq / n_samples)
+    # Ensure length is even for int16 (2 bytes per sample)
+    even_len = (len(pcm_bytes) // 2) * 2
+    samples = np.frombuffer(pcm_bytes[:even_len], dtype=np.int16).astype(np.float64)
+    if samples.size == 0:
+        return 0.0
+    return float(np.sqrt(np.mean(samples ** 2)))
 

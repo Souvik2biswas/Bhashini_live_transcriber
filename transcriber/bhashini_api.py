@@ -11,6 +11,7 @@ Pipeline config is cached per-language for the lifetime of the process.
 
 import json
 import threading
+import time
 from typing import Optional
 
 import requests
@@ -221,19 +222,20 @@ _config_cache: dict = {}
 _cache_lock = threading.Lock()
 
 
-def get_pipeline_config(source_lang: str) -> dict:
+def get_pipeline_config(source_lang: str, target_lang: str = "en") -> dict:
     """
     Pipeline Config Call — fetches ASR + NMT service IDs and the dynamic
-    inference endpoint. Result is cached per language for the lifetime of
-    the process (one call per language per session).
+    inference endpoint. Result is cached per (source, target) pair for the
+    lifetime of the process.
 
     Returns dict with:
         callback_url, auth_key_name, auth_key_value,
         asr_service_id, nmt_service_id
     """
+    cache_key = (source_lang, target_lang)
     with _cache_lock:
-        if source_lang in _config_cache:
-            return _config_cache[source_lang]
+        if cache_key in _config_cache:
+            return _config_cache[cache_key]
 
     tasks = []
     lang_info = LANGUAGES.get(source_lang, {})
@@ -250,7 +252,7 @@ def get_pipeline_config(source_lang: str) -> dict:
             "config": {
                 "language": {
                     "sourceLanguage": source_lang,
-                    "targetLanguage": "en"
+                    "targetLanguage": target_lang
                 }
             }
         })
@@ -326,7 +328,7 @@ def get_pipeline_config(source_lang: str) -> dict:
     }
 
     with _cache_lock:
-        _config_cache[source_lang] = result
+        _config_cache[cache_key] = result
 
     return result
 
@@ -334,6 +336,7 @@ def get_pipeline_config(source_lang: str) -> dict:
 def transcribe_and_translate(
     audio_b64_wav: str,
     source_lang: str,
+    target_lang: str = "en",
 ) -> tuple[str, str]:
     """
     Pipeline Compute Call — sends base64-encoded WAV audio through chained
@@ -342,11 +345,12 @@ def transcribe_and_translate(
     Args:
         audio_b64_wav : base64-encoded WAV string (16kHz, mono, PCM16)
         source_lang   : ISO 639 code ('ta', 'te', 'kn', 'ml')
+        target_lang   : Target language ISO 639 code (default: 'en')
 
     Returns:
         (transcript_in_source_lang, english_translation)
     """
-    config = get_pipeline_config(source_lang)
+    config = get_pipeline_config(source_lang, target_lang)
 
     if not config.get("asr_service_id"):
         raise RuntimeError(f"Speech recognition is not supported for {LANGUAGES.get(source_lang, {}).get('name', source_lang)}.")
@@ -369,7 +373,7 @@ def transcribe_and_translate(
             "config": {
                 "language": {
                     "sourceLanguage": source_lang,
-                    "targetLanguage": "en"
+                    "targetLanguage": target_lang
                 },
                 "serviceId": config["nmt_service_id"],
             }
@@ -405,19 +409,16 @@ def transcribe_and_translate(
             else:
                 last_error_msg = f"Dhruva API {resp.status_code}: {resp.reason} (Attempt {attempt})"
                 if resp.status_code == 500 or resp.status_code == 429:
-                    import time
                     time.sleep(retry_delay * attempt)
                     continue
                 else:
                     raise RuntimeError(last_error_msg + f"\nBody: {resp.text[:500]}")
         except requests.exceptions.Timeout:
             last_error_msg = f"Compute call timed out (Attempt {attempt})"
-            import time
             time.sleep(retry_delay * attempt)
             continue
         except requests.exceptions.RequestException as e:
             last_error_msg = f"Compute call failed: {e} (Attempt {attempt})"
-            import time
             time.sleep(retry_delay * attempt)
             continue
     else:

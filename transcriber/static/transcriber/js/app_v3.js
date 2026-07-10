@@ -1105,10 +1105,44 @@
 
         // Connect WebSocket
         connectWebSocket();
+
+        // Theme Toggle
+        initTheme();
     }
 
 
-    // ─── Utility ────────────────────────────────────────────────────────────────
+    // ─── Utility & Theme ────────────────────────────────────────────────────────
+
+    function initTheme() {
+        const themeToggleBtn = $('themeToggle');
+        if (!themeToggleBtn) return;
+
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        updateThemeUI(currentTheme);
+
+        themeToggleBtn.addEventListener('click', () => {
+            const activeTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', activeTheme);
+            localStorage.setItem('theme', activeTheme);
+            updateThemeUI(activeTheme);
+        });
+    }
+
+    function updateThemeUI(theme) {
+        const themeToggleBtn = $('themeToggle');
+        if (!themeToggleBtn) return;
+
+        const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+        const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+
+        if (theme === 'light') {
+            sunIcon?.classList.remove('hidden');
+            moonIcon?.classList.add('hidden');
+        } else {
+            sunIcon?.classList.add('hidden');
+            moonIcon?.classList.remove('hidden');
+        }
+    }
 
     function escapeHtml(str) {
         const div = document.createElement('div');

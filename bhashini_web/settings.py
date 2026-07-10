@@ -20,16 +20,13 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = ["*"]
 
 # ─── Bhashini API Credentials ──────────────────────────────────────────────────
-BHASHINI_USER_ID = os.getenv(
-    "BHASHINI_USER_ID", "ec359508556040529d5383c73ede5568"
-)
-BHASHINI_ULCA_KEY = os.getenv(
-    "BHASHINI_ULCA_KEY", "157ebde0c5-7907-481b-9420-5e148dc255c2"
-)
-BHASHINI_INFERENCE_KEY = os.getenv(
-    "BHASHINI_INFERENCE_KEY",
-    "aFT_C1IEbGW4cHwGl5JDZ2NDY3UnhxeP7i7YagvKhkW980pK3CwCBAUlcOniHUHW"
-)
+BHASHINI_USER_ID = os.getenv("BHASHINI_USER_ID")
+BHASHINI_ULCA_KEY = os.getenv("BHASHINI_ULCA_KEY")
+BHASHINI_INFERENCE_KEY = os.getenv("BHASHINI_INFERENCE_KEY")
+
+if not all([BHASHINI_USER_ID, BHASHINI_ULCA_KEY, BHASHINI_INFERENCE_KEY]):
+    raise RuntimeError("Missing Bhashini credentials — set them in your .env file.")
+
 BHASHINI_CONFIG_URL = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
 BHASHINI_PIPELINE_ID = "64392f96daac500b55c543cd"
 
