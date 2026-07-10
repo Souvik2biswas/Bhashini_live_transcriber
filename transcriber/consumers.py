@@ -117,7 +117,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
 
             while len(self.pcm_buffer) >= chunk_size:
                 pcm_chunk = bytes(self.pcm_buffer[:chunk_size])
-                self.pcm_buffer = self.pcm_buffer[chunk_size:]
+                del self.pcm_buffer[:chunk_size]
                 await self._process_pcm_chunk(pcm_chunk)
 
     # ── Config Handler ────────────────────────────────────────────────────────
@@ -209,6 +209,13 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
                 transcribe_and_translate
             )(wav_b64, self.source_lang)
             latency = time.perf_counter() - t0
+
+            chunk_duration = len(pcm_bytes) / (16000 * 2)
+            if latency > chunk_duration:
+                logger.warning(
+                    f"Processing chunk #{chunk_num} took {latency:.2f}s, which is longer than "
+                    f"the chunk duration of {chunk_duration:.2f}s! The live transcript stream may fall behind."
+                )
 
             # ── Step 3: Send result ───────────────────────────────────────────
             if not transcript:

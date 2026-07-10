@@ -12,6 +12,12 @@
     --bg-glass:         rgba(255, 255, 255, 0.06);
     --border-glass:     rgba(255, 255, 255, 0.08);
     --border-active:    rgba(99, 102, 241, 0.5);
+    --bg-header:        rgba(6, 6, 15, 0.8);
+    --bg-viewport:      rgba(10, 10, 15, 0.4);
+    --stroke-link:      rgba(255, 255, 255, 0.12);
+    --shadow-node:      drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+    --scrollbar-thumb:  rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
 
     /* Text */
     --text-primary:     #f0f0f5;
@@ -49,6 +55,95 @@
     /* Timing */
     --ease-out:         cubic-bezier(0.16, 1, 0.3, 1);
     --ease-spring:      cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Light Glassmorphic Theme ─────────────────────────────────────────────── */
+[data-theme="light"] {
+    /* Surfaces */
+    --bg-primary:       #f3f4f6; /* Soft cool grey background */
+    --bg-secondary:     #ffffff;
+    --bg-card:          rgba(15, 23, 42, 0.04);
+    --bg-card-hover:    rgba(15, 23, 42, 0.07);
+    --bg-glass:         rgba(255, 255, 255, 0.6);
+    --border-glass:     rgba(15, 23, 42, 0.08);
+    --border-active:    rgba(99, 102, 241, 0.7);
+    --bg-header:        rgba(255, 255, 255, 0.8);
+    --bg-viewport:      rgba(255, 255, 255, 0.45);
+    --stroke-link:      rgba(15, 23, 42, 0.08);
+    --shadow-node:      drop-shadow(0 2px 6px rgba(15, 23, 42, 0.12));
+    --scrollbar-thumb:  rgba(15, 23, 42, 0.15);
+    --scrollbar-thumb-hover: rgba(15, 23, 42, 0.25);
+
+    /* Text */
+    --text-primary:     #0f172a; /* Slate 900 */
+    --text-secondary:   #334155; /* Slate 700 */
+    --text-tertiary:    #64748b; /* Slate 500 */
+
+    /* Accent Palette (tuned for better contrast on light theme) */
+    --accent-indigo:    #4f46e5;
+    --accent-cyan:      #0891b2;
+    --accent-emerald:   #059669;
+    --accent-rose:      #db2777;
+    --accent-amber:     #b45309;
+    --accent-purple:    #7e22ce;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #4f46e5, #0891b2);
+    --gradient-record:  linear-gradient(135deg, #e11d48, #be123c);
+    --gradient-bg:      radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.07) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(8, 145, 178, 0.06) 0%, transparent 60%),
+                        radial-gradient(ellipse at 50% 100%, rgba(147, 51, 234, 0.05) 0%, transparent 60%);
+
+    /* Shadows */
+    --shadow-sm:        0 2px 8px rgba(15, 23, 42, 0.04);
+    --shadow-md:        0 4px 16px rgba(15, 23, 42, 0.06);
+    --shadow-lg:        0 8px 32px rgba(15, 23, 42, 0.08);
+    --shadow-glow:      0 0 20px rgba(99, 102, 241, 0.1);
+}
+
+/* ─── Theme Toggle Button ────────────────────────────────────────────────── */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s var(--ease-out);
+    padding: 0;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    transform: scale(1.05);
+    border-color: var(--border-active);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle svg {
+    transition: transform 0.4s var(--ease-spring);
+}
+
+.theme-toggle:hover svg {
+    transform: rotate(15deg);
+}
+
+.theme-toggle .hidden {
+    display: none !important;
 }
 
 
@@ -122,7 +217,7 @@ body::before {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(6, 6, 15, 0.8);
+    background: var(--bg-header);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-bottom: 1px solid var(--border-glass);
@@ -317,14 +412,14 @@ body::before {
     font-size: 0.58rem;
     font-weight: 700;
     text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--bg-card);
     color: var(--text-secondary);
     padding: 2px 6px;
     border-radius: 4px;
     margin-top: 4px;
     position: relative;
     z-index: 1;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-glass);
 }
 
 .lang-check {
@@ -568,11 +663,11 @@ body::before {
     background: transparent;
 }
 .results-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 2px;
 }
 .results-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb-hover);
 }
 
 /* Empty State */
@@ -1066,18 +1161,17 @@ body::before {
     color: var(--text-primary);
 }
 
-/* ─── SVG Tree Viewport ─── */
 .tree-viewport-wrapper {
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    background: rgba(10, 10, 15, 0.4);
+    background: var(--bg-viewport);
     border-radius: 12px;
     border: 1px solid var(--border-glass);
     padding: 16px;
     margin-bottom: 20px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .tree-viewport-wrapper::-webkit-scrollbar {
@@ -1085,7 +1179,7 @@ body::before {
 }
 
 .tree-viewport-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
 }
 
@@ -1108,7 +1202,7 @@ body::before {
 
 /* SVG Elements Styling */
 .tree-link {
-    stroke: rgba(255, 255, 255, 0.12);
+    stroke: var(--stroke-link);
     stroke-width: 2.5;
     fill: none;
     transition: stroke 0.3s var(--ease-out);
@@ -1133,7 +1227,7 @@ body::before {
 }
 
 .tree-node.supported .node-circle {
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.2));
+    filter: var(--shadow-node);
 }
 
 .tree-node.supported:hover .node-circle {
