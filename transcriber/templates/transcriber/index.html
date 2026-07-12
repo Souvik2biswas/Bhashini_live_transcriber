@@ -98,11 +98,13 @@
             <div class="language-section-header">
                 <h2 class="section-label">Select Source Language</h2>
                 <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <label for="targetLangSelect" class="section-label" style="margin-bottom:0; font-size:0.75rem;">Translate to:</label>
-                        <select id="targetLangSelect" class="audio-source-select" style="padding: 6px 32px 6px 12px; border-radius: 20px; font-size: 0.8rem; background-position: right 10px center; height:34px;">
-                            <option value="en">English</option>
-                        </select>
+                    <div style="position:relative;">
+                        <button class="scroll-toggle" id="targetLangDropdownBtn" title="Select target language" style="height:34px; padding:6px 16px; border-radius:20px; font-size:0.8rem; font-weight:500;">
+                            🌐 Translate to: <strong id="selectedTargetLangLabel" style="color: var(--accent-indigo); margin-left: 4px;">English</strong>
+                        </button>
+                        <div class="export-dropdown hidden" id="targetLangDropdown" style="max-height:280px; overflow-y:auto; right:0; min-width:185px;">
+                            <!-- Dynamically populated buttons -->
+                        </div>
                     </div>
                     <div class="view-toggle" id="viewToggle">
                         <button class="toggle-btn active" data-view="grid" id="btnViewGrid">

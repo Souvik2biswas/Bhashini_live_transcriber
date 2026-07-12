@@ -58,7 +58,9 @@
         recordBtnIcon:   $('recordBtnIcon'),
         recordBtnLabel:  $('recordBtnLabel'),
         audioSourceSelect: $('audioSourceSelect'),
-        targetLangSelect: $('targetLangSelect'),
+        targetLangDropdownBtn: $('targetLangDropdownBtn'),
+        targetLangDropdown: $('targetLangDropdown'),
+        selectedTargetLangLabel: $('selectedTargetLangLabel'),
         levelContainer:  $('levelMeterContainer'),
         levelFill:       $('levelFill'),
         levelLabel:      $('levelLabel'),
@@ -500,27 +502,34 @@
     function renderLanguageGrid(languages) {
         supportedLanguages = languages;
 
-        // Dynamically populate Target Language Select dropdown
-        if (dom.targetLangSelect) {
-            const currentTarget = selectedTargetLang || 'en';
-            dom.targetLangSelect.innerHTML = '';
+        // Dynamically populate Target Language Custom Dropdown
+        if (dom.targetLangDropdown) {
+            dom.targetLangDropdown.innerHTML = '';
             
-            const enOpt = document.createElement('option');
-            enOpt.value = 'en';
-            enOpt.textContent = 'English';
-            if (currentTarget === 'en') enOpt.selected = true;
-            dom.targetLangSelect.appendChild(enOpt);
+            const enBtn = document.createElement('button');
+            enBtn.className = 'export-dropdown-item';
+            enBtn.dataset.lang = 'en';
+            enBtn.textContent = 'English';
+            if (selectedTargetLang === 'en') {
+                enBtn.style.fontWeight = 'bold';
+                enBtn.style.color = 'var(--accent-indigo)';
+            }
+            dom.targetLangDropdown.appendChild(enBtn);
             
             const otherLangs = Object.entries(languages)
                 .filter(([code, info]) => code !== 'en' && info.translation_supported !== false)
                 .sort((a, b) => a[1].name.localeCompare(b[1].name));
                 
             otherLangs.forEach(([code, info]) => {
-                const opt = document.createElement('option');
-                opt.value = code;
-                opt.textContent = `${info.name} (${info.native})`;
-                if (currentTarget === code) opt.selected = true;
-                dom.targetLangSelect.appendChild(opt);
+                const btn = document.createElement('button');
+                btn.className = 'export-dropdown-item';
+                btn.dataset.lang = code;
+                btn.textContent = `${info.name} (${info.native})`;
+                if (selectedTargetLang === code) {
+                    btn.style.fontWeight = 'bold';
+                    btn.style.color = 'var(--accent-indigo)';
+                }
+                dom.targetLangDropdown.appendChild(btn);
             });
         }
 
@@ -1523,13 +1532,43 @@
             });
         }
 
-        // Target Language select listener
-        if (dom.targetLangSelect) {
-            dom.targetLangSelect.addEventListener('change', (e) => {
-                selectedTargetLang = e.target.value;
-                const label = dom.targetLangSelect.options[dom.targetLangSelect.selectedIndex].text;
-                showToast(`Target Language: ${label}`, 'info');
+        // Target Language Custom Dropdown Toggle
+        if (dom.targetLangDropdownBtn) {
+            dom.targetLangDropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dom.targetLangDropdown.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', () => {
+                dom.targetLangDropdown.classList.add('hidden');
+            });
+        }
+
+        // Target Language selection handler delegation
+        if (dom.targetLangDropdown) {
+            dom.targetLangDropdown.addEventListener('click', (e) => {
+                const item = e.target.closest('.export-dropdown-item');
+                if (!item) return;
                 
+                e.stopPropagation();
+                dom.targetLangDropdown.classList.add('hidden');
+                
+                const lang = item.dataset.lang;
+                selectedTargetLang = lang;
+                
+                // Update UI selection highlights
+                dom.targetLangDropdown.querySelectorAll('.export-dropdown-item').forEach(btn => {
+                    btn.style.fontWeight = 'normal';
+                    btn.style.color = 'var(--text-secondary)';
+                });
+                item.style.fontWeight = 'bold';
+                item.style.color = 'var(--accent-indigo)';
+                
+                // Update button label
+                const langName = lang === 'en' ? 'English' : (supportedLanguages[lang]?.name || lang);
+                dom.selectedTargetLangLabel.textContent = langName;
+                
+                showToast(`Target Language: ${langName}`, 'info');
                 sendConfig(selectedLang);
                 
                 // If recording, stop and restart to apply new target language
