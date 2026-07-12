@@ -250,7 +250,7 @@ body::before {
 }
 
 .app-title {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     font-weight: 700;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
@@ -950,6 +950,10 @@ body::before {
 
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+    .app-title {
+        font-size: 1.2rem;
+    }
+
     .language-grid {
         grid-template-columns: repeat(2, 1fr);
     }
