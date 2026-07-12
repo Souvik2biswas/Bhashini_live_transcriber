@@ -8,6 +8,14 @@
   ],
   "routes": [
     {
+      "src": "/_vercel/speed-insights/(.*)",
+      "dest": "/_vercel/speed-insights/$1"
+    },
+    {
+      "src": "/_vercel/insights/(.*)",
+      "dest": "/_vercel/insights/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "bhashini_web/asgi.py"
     }
