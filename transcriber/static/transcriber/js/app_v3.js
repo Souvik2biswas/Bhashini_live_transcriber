@@ -34,6 +34,9 @@
     let chunkInterval = null;
     let activeTreeTab = 'indo-aryan';
     let currentViewMode = 'grid';
+    let autoScrollEnabled = true;
+    let transcriptHistory = [];
+    let activeOnboardingStep = 0;
 
     // Stats
     let stats = {
@@ -53,6 +56,7 @@
         recordBtn:       $('recordBtn'),
         recordBtnIcon:   $('recordBtnIcon'),
         recordBtnLabel:  $('recordBtnLabel'),
+        audioSourceSelect: $('audioSourceSelect'),
         levelContainer:  $('levelMeterContainer'),
         levelFill:       $('levelFill'),
         levelLabel:      $('levelLabel'),
@@ -64,6 +68,9 @@
         resultsContainer:$('resultsContainer'),
         resultsEmpty:    $('resultsEmpty'),
         clearBtn:        $('clearBtn'),
+        scrollToggle:    $('scrollToggle'),
+        exportBtn:       $('exportBtn'),
+        exportDropdown:  $('exportDropdown'),
         textInput:       $('textInput'),
         translateBtn:    $('translateBtn'),
         textOutput:      $('textOutput'),
@@ -71,6 +78,18 @@
         treeViewport:    $('treeViewport'),
         treeTabs:        $('treeTabs'),
         viewToggle:      $('viewToggle'),
+        languageSearch:  $('languageSearch'),
+        languageSearchClear: $('languageSearchClear'),
+        languageSearchEmpty: $('languageSearchEmpty'),
+        toastContainer:  $('toastContainer'),
+        onboardingOverlay: $('onboardingOverlay'),
+        onboardingCard:  $('onboardingCard'),
+        onboardingStepIcon: $('onboardingStepIcon'),
+        onboardingTitle: $('onboardingTitle'),
+        onboardingDesc:  $('onboardingDesc'),
+        onboardingDots:  $('onboardingDots'),
+        onboardingBtnSkip: $('onboardingBtnSkip'),
+        onboardingBtnNext: $('onboardingBtnNext'),
     };
 
 
@@ -92,6 +111,7 @@
             reconnectAttempts = 0;
             updateConnectionStatus('connected');
             updateMicrophoneState();
+            showToast('Connected to server', 'success');
 
             // Send language config
             sendConfig(selectedLang);
@@ -114,6 +134,8 @@
             if (isRecording) {
                 stopRecording();
             }
+
+            showToast('Connection to server lost. Reconnecting...', 'warning');
 
             // Reconnect with exponential backoff
             const delay = Math.min(
@@ -252,15 +274,40 @@
     }
 
     async function startRecording() {
+        const sourceMode = dom.audioSourceSelect ? dom.audioSourceSelect.value : 'mic';
         try {
-            // Request microphone access
-            audioStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl:  true,
+            if (sourceMode === 'system') {
+                // Request display media (screen/tab share) with audio
+                audioStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+                
+                // Check if audio track exists
+                const audioTracks = audioStream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    // Stop video tracks immediately
+                    audioStream.getTracks().forEach(t => t.stop());
+                    showToast('No system audio detected. Make sure to check "Share audio" in the popup!', 'error');
+                    addErrorCard('System Audio sharing requires selecting the "Share audio" checkbox in the browser prompt.');
+                    return;
                 }
-            });
+                
+                // Stop the video track to prevent background screen capture visual issues
+                audioStream.getVideoTracks().forEach(track => track.stop());
+                
+                showToast('Recording system audio', 'info');
+            } else {
+                // Request microphone access
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl:  true,
+                    }
+                });
+                showToast('Microphone recording started', 'info');
+            }
 
             // Set up Web Audio API for level metering and get the source node
             const source = setupAudioAnalyser(audioStream);
@@ -285,17 +332,20 @@
 
             // Update UI
             updateRecordingUI(true);
-            console.log(`[Recorder] Started continuous PCM streaming (resampled from ${audioContext.sampleRate}Hz to 16000Hz)`);
+            console.log(`[Recorder] Started continuous PCM streaming (${sourceMode}, resampled from ${audioContext.sampleRate}Hz to 16000Hz)`);
 
         } catch (err) {
             console.error('[Recorder] Failed to start:', err);
 
             if (err.name === 'NotAllowedError') {
+                const deviceName = sourceMode === 'system' ? 'System audio share' : 'Microphone';
                 addErrorCard(
-                    'Microphone access denied. Please allow microphone access in your browser settings and try again.',
+                    `${deviceName} access denied. Please grant permission in your browser settings and try again.`
                 );
+                showToast(`${deviceName} access denied`, 'error');
             } else {
-                addErrorCard(`Microphone error: ${err.message}`);
+                addErrorCard(`Audio capture error: ${err.message}`);
+                showToast(`Error: ${err.message}`, 'error');
             }
         }
     }
@@ -320,6 +370,7 @@
 
         stopAudioAnalyser();
         updateRecordingUI(false);
+        showToast('Recording stopped', 'info');
         console.log('[Recorder] Stopped');
     }
 
@@ -928,6 +979,15 @@
             hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
         });
 
+        // Store in history for export
+        transcriptHistory.push({
+            chunkNum: msg.chunk_num,
+            timestamp: time,
+            transcript: msg.transcript,
+            translation: msg.translation,
+            lang: msg.lang
+        });
+
         card.innerHTML = `
             <div class="result-meta">
                 <span class="chunk-badge">#${String(msg.chunk_num).padStart(3, '0')}</span>
@@ -947,8 +1007,10 @@
         // Insert at top
         dom.resultsContainer.insertBefore(card, dom.resultsContainer.firstChild);
 
-        // Auto-scroll to top
-        dom.resultsContainer.scrollTop = 0;
+        // Auto-scroll to top if enabled
+        if (autoScrollEnabled) {
+            dom.resultsContainer.scrollTop = 0;
+        }
     }
 
     function addProcessingCard(chunkNum) {
@@ -999,6 +1061,8 @@
         cards.forEach(card => card.remove());
         showEmptyState();
         resetStats();
+        transcriptHistory = [];
+        showToast('Transcription history cleared', 'info');
     }
 
 
@@ -1031,6 +1095,254 @@
 
 
     // ═══════════════════════════════════════════════════════════════════════════
+    // New Feature Helper Functions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ─── Toast Notifications ───
+    function showToast(message, type = 'info', duration = 3000) {
+        if (!dom.toastContainer) return;
+        
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✅';
+        if (type === 'warning') icon = '⚠️';
+        if (type === 'error') icon = '❌';
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${escapeHtml(message)}</span>
+            <button class="toast-dismiss" aria-label="Dismiss">&times;</button>
+        `;
+        
+        toast.querySelector('.toast-dismiss').addEventListener('click', () => {
+            dismissToast(toast);
+        });
+        
+        const timer = setTimeout(() => {
+            dismissToast(toast);
+        }, duration);
+        
+        toast.dataset.timer = timer;
+        dom.toastContainer.appendChild(toast);
+        
+        const activeToasts = dom.toastContainer.querySelectorAll('.toast');
+        if (activeToasts.length > 3) {
+            dismissToast(activeToasts[0]);
+        }
+    }
+    
+    function dismissToast(toast) {
+        if (toast.classList.contains('toast-out')) return;
+        
+        clearTimeout(parseInt(toast.dataset.timer || 0));
+        toast.classList.add('toast-out');
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }
+
+    // ─── Language Search & Filter ───
+    function filterLanguages(query) {
+        const cleanQuery = query.toLowerCase().trim();
+        let visibleCount = 0;
+        
+        if (!cleanQuery) {
+            document.querySelectorAll('.lang-card').forEach(card => {
+                card.classList.remove('search-hidden');
+            });
+            document.querySelectorAll('.family-section-group').forEach(group => {
+                group.classList.remove('search-hidden');
+            });
+            applyActiveFilter();
+            dom.languageSearchClear.classList.remove('visible');
+            dom.languageSearchEmpty.classList.remove('visible');
+            return;
+        }
+        
+        dom.languageSearchClear.classList.add('visible');
+        
+        FAMILY_ORDER.forEach(family => {
+            const groupEl = document.querySelector(`.family-section-group[data-family="${family}"]`);
+            if (!groupEl) return;
+            
+            let groupVisibleCount = 0;
+            const cards = groupEl.querySelectorAll('.lang-card');
+            
+            cards.forEach(card => {
+                const code = card.dataset.lang;
+                const langInfo = supportedLanguages[code];
+                
+                if (!langInfo) return;
+                
+                const name = langInfo.name.toLowerCase();
+                const native = langInfo.native.toLowerCase();
+                
+                if (name.includes(cleanQuery) || native.includes(cleanQuery) || code.includes(cleanQuery)) {
+                    card.classList.remove('search-hidden');
+                    groupVisibleCount++;
+                    visibleCount++;
+                } else {
+                    card.classList.add('search-hidden');
+                }
+            });
+            
+            if (groupVisibleCount > 0) {
+                groupEl.classList.remove('search-hidden');
+            } else {
+                groupEl.classList.add('search-hidden');
+            }
+        });
+        
+        if (visibleCount === 0) {
+            dom.languageSearchEmpty.classList.add('visible');
+        } else {
+            dom.languageSearchEmpty.classList.remove('visible');
+        }
+    }
+
+    // ─── Transcript Export Utilities ───
+    function copyAllTranscripts() {
+        if (transcriptHistory.length === 0) {
+            showToast('No transcripts to copy', 'warning');
+            return;
+        }
+        
+        const fullText = transcriptHistory.map(item => 
+            `[${item.timestamp}] [${item.lang}] Source: ${item.transcript}\nTranslation: ${item.translation}`
+        ).join('\n\n');
+        
+        navigator.clipboard.writeText(fullText)
+            .then(() => showToast('Transcript copied to clipboard', 'success'))
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                showToast('Failed to copy to clipboard', 'error');
+            });
+    }
+    
+    function downloadTranscripts(format) {
+        if (transcriptHistory.length === 0) {
+            showToast('No transcripts to download', 'warning');
+            return;
+        }
+        
+        let fileContent = '';
+        let mimeType = 'text/plain';
+        let extension = 'txt';
+        
+        if (format === 'txt') {
+            fileContent = transcriptHistory.map(item => 
+                `[${item.timestamp}] [${item.lang}]\nSource: ${item.transcript}\nTranslation: ${item.translation}\n----------------------------------`
+            ).join('\n\n');
+        } else if (format === 'srt') {
+            mimeType = 'text/srt';
+            extension = 'srt';
+            
+            fileContent = transcriptHistory.map((item, idx) => {
+                const sTime = idx * 4;
+                const eTime = (idx + 1) * 4;
+                const formatTime = (seconds) => {
+                    const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+                    const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+                    const secs = String(Math.floor(seconds % 60)).padStart(2, '0');
+                    return `${hrs}:${mins}:${secs},000`;
+                };
+                return `${idx + 1}\n${formatTime(sTime)} --> ${formatTime(eTime)}\n${item.translation}\n`;
+            }).join('\n');
+        }
+        
+        const blob = new Blob([fileContent], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestampStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `bhashini_transcript_${timestampStr}.${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        showToast(`Transcript downloaded as .${extension.toUpperCase()}`, 'success');
+    }
+
+    // ─── Onboarding Guide ───
+    const ONBOARDING_STEPS = [
+        {
+            title: "1. Select Source Language",
+            desc: "Choose from 22 supported Indian languages. Type in the Search box to filter instantly, or use the Graph view.",
+            icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>`,
+            target: 'languageSearchWrapper'
+        },
+        {
+            title: "2. Audio Source & Recording",
+            desc: "Switch to System Audio to capture display audio (tabs/windows) or Microphone. Click Start Recording to begin.",
+            icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
+            target: 'recordBtn'
+        },
+        {
+            title: "3. Live Transcriptions & Export",
+            desc: "Watch real-time translations below. Use Export to copy/download, or toggle Auto-Scroll to pin/unpin text scroll.",
+            icon: `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+            target: 'resultsContainer'
+        }
+    ];
+
+    function startOnboarding() {
+        activeOnboardingStep = 0;
+        updateOnboardingUI();
+        dom.onboardingOverlay.classList.remove('hidden');
+    }
+
+    function updateOnboardingUI() {
+        const step = ONBOARDING_STEPS[activeOnboardingStep];
+        if (!step) return;
+
+        dom.onboardingStepIcon.innerHTML = step.icon;
+        dom.onboardingTitle.textContent = step.title;
+        dom.onboardingDesc.textContent = step.desc;
+
+        const dots = dom.onboardingDots.querySelectorAll('.onboarding-dot');
+        dots.forEach((dot, idx) => {
+            if (idx === activeOnboardingStep) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+
+        if (activeOnboardingStep === ONBOARDING_STEPS.length - 1) {
+            dom.onboardingBtnNext.textContent = 'Got it!';
+        } else {
+            dom.onboardingBtnNext.textContent = 'Next';
+        }
+
+        const targetEl = $(step.target);
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function handleOnboardingNext() {
+        if (activeOnboardingStep < ONBOARDING_STEPS.length - 1) {
+            activeOnboardingStep++;
+            updateOnboardingUI();
+        } else {
+            closeOnboarding();
+        }
+    }
+
+    function closeOnboarding() {
+        dom.onboardingOverlay.classList.add('hidden');
+        localStorage.setItem('onboarding_completed', 'true');
+        showToast('Onboarding complete! Enjoy Live Transcriber.', 'success');
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // Event Listeners
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1047,6 +1359,124 @@
 
         // Clear button
         dom.clearBtn.addEventListener('click', clearResults);
+
+        // Auto Scroll Toggle
+        if (dom.scrollToggle) {
+            dom.scrollToggle.addEventListener('click', () => {
+                autoScrollEnabled = !autoScrollEnabled;
+                dom.scrollToggle.classList.toggle('pinned', !autoScrollEnabled);
+                dom.scrollToggle.title = autoScrollEnabled ? 'Auto-scroll is active' : 'Auto-scroll is paused';
+                dom.scrollToggle.querySelector('span').textContent = `Auto-Scroll: ${autoScrollEnabled ? 'On' : 'Off'}`;
+                showToast(`Auto-Scroll ${autoScrollEnabled ? 'Enabled' : 'Paused'}`, 'info');
+            });
+        }
+
+        // Export Dropdown Toggle
+        if (dom.exportBtn) {
+            dom.exportBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dom.exportDropdown.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', () => {
+                dom.exportDropdown.classList.add('hidden');
+            });
+        }
+
+        // Export Option actions
+        document.querySelectorAll('.export-dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dom.exportDropdown.classList.add('hidden');
+                
+                const format = item.dataset.format;
+                if (format === 'copy') {
+                    copyAllTranscripts();
+                } else {
+                    downloadTranscripts(format);
+                }
+            });
+        });
+
+        // Language Search Input
+        if (dom.languageSearch) {
+            dom.languageSearch.addEventListener('input', (e) => {
+                filterLanguages(e.target.value);
+            });
+            
+            dom.languageSearch.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    dom.languageSearch.value = '';
+                    filterLanguages('');
+                    dom.languageSearch.blur();
+                }
+            });
+        }
+
+        if (dom.languageSearchClear) {
+            dom.languageSearchClear.addEventListener('click', () => {
+                dom.languageSearch.value = '';
+                filterLanguages('');
+                dom.languageSearch.focus();
+            });
+        }
+
+        // Keyboard Shortcuts listener
+        document.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement.tagName.toLowerCase();
+            if (activeTag === 'input' || activeTag === 'textarea') {
+                return;
+            }
+
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                dom.recordBtn.click();
+            }
+
+            if (e.key === 'Escape') {
+                if (isRecording) {
+                    stopRecording();
+                }
+            }
+            
+            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+                e.preventDefault();
+                copyAllTranscripts();
+            }
+        });
+
+        // Audio Source select listener
+        if (dom.audioSourceSelect) {
+            dom.audioSourceSelect.addEventListener('change', (e) => {
+                const source = e.target.value;
+                const label = source === 'system' ? 'System Audio (Tab/Window)' : 'Microphone';
+                showToast(`Audio Source: ${label}`, 'info');
+                
+                if (isRecording) {
+                    stopRecording();
+                    showToast('Restart recording to apply source change', 'warning');
+                }
+            });
+        }
+
+        // Onboarding Navigation actions
+        if (dom.onboardingBtnNext) {
+            dom.onboardingBtnNext.addEventListener('click', handleOnboardingNext);
+        }
+        if (dom.onboardingBtnSkip) {
+            dom.onboardingBtnSkip.addEventListener('click', closeOnboarding);
+        }
+
+        // Onboarding Check
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceOnboarding = urlParams.get('onboarding') === '1';
+        if (forceOnboarding) {
+            localStorage.removeItem('onboarding_completed');
+        }
+        
+        if (!localStorage.getItem('onboarding_completed')) {
+            setTimeout(startOnboarding, 800);
+        }
 
         // Text translate
         dom.translateBtn.addEventListener('click', sendTextTranslation);

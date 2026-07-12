@@ -124,6 +124,16 @@
                 </div>
             </div>
 
+            <!-- Language Search -->
+            <div class="language-search-wrapper" id="languageSearchWrapper">
+                <input type="text" id="languageSearch" class="language-search" placeholder="Search languages by name, native script, or code…">
+                <span class="language-search-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </span>
+                <button id="languageSearchClear" class="language-search-clear" title="Clear search">×</button>
+            </div>
+            <div class="language-search-empty" id="languageSearchEmpty">No matching languages found</div>
+
             <!-- Category Filter Pills -->
             <div class="family-filters" id="familyFilters">
                 <button class="filter-pill active" data-family="all">All</button>
@@ -174,6 +184,12 @@
                     <span class="record-btn-label" id="recordBtnLabel">Start Recording</span>
                 </button>
 
+                <!-- Audio Source Select -->
+                <select id="audioSourceSelect" class="audio-source-select" title="Choose audio source">
+                    <option value="mic">🎙️ Microphone</option>
+                    <option value="system">🖥️ System Audio</option>
+                </select>
+
                 <!-- Audio Level Meter -->
                 <div class="level-meter-container" id="levelMeterContainer">
                     <div class="level-meter">
@@ -208,13 +224,35 @@
         <section class="results-section">
             <div class="results-header">
                 <h2 class="section-label">Live Transcriptions</h2>
-                <button class="clear-btn" id="clearBtn" title="Clear all transcriptions">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                    </svg>
-                    Clear
-                </button>
+                <div class="results-actions">
+                    <button class="scroll-toggle" id="scrollToggle" title="Auto-scroll is active">
+                        <svg class="pin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="17" x2="12" y2="22"></line>
+                            <path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.32-2.9A2 2 0 0 1 15.8 9.86V5a3 3 0 0 0-6 0v4.86a2 2 0 0 1-.44 1.24l-2.32 2.9A2 2 0 0 0 5 15.24z"></path>
+                        </svg>
+                        <span>Auto-Scroll: On</span>
+                    </button>
+                    <button class="export-btn" id="exportBtn" title="Export options">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Export</span>
+                        <div class="export-dropdown hidden" id="exportDropdown">
+                            <button class="export-dropdown-item" data-format="copy">📋 Copy Text</button>
+                            <button class="export-dropdown-item" data-format="txt">📄 Download TXT</button>
+                            <button class="export-dropdown-item" data-format="srt">🎬 Download SRT</button>
+                        </div>
+                    </button>
+                    <button class="clear-btn" id="clearBtn" title="Clear all transcriptions">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                        </svg>
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <div class="results-container" id="resultsContainer">
@@ -265,6 +303,29 @@
     <footer class="app-footer">
         <p>Powered by <strong>Bhashini</strong> · ULCA / Dhruva API · MeitY, Govt. of India</p>
     </footer>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Onboarding Guide -->
+    <div id="onboardingOverlay" class="onboarding-overlay hidden">
+        <div class="onboarding-card" id="onboardingCard">
+            <div class="onboarding-step-icon" id="onboardingStepIcon">
+                <!-- SVG dynamically inserted -->
+            </div>
+            <h3 class="onboarding-title" id="onboardingTitle">Welcome to Live Transcriber</h3>
+            <p class="onboarding-desc" id="onboardingDesc">Let's walk you through the key features.</p>
+            <div class="onboarding-dots" id="onboardingDots">
+                <span class="onboarding-dot active"></span>
+                <span class="onboarding-dot"></span>
+                <span class="onboarding-dot"></span>
+            </div>
+            <div class="onboarding-actions">
+                <button class="onboarding-btn onboarding-btn-skip" id="onboardingBtnSkip">Skip</button>
+                <button class="onboarding-btn onboarding-btn-primary" id="onboardingBtnNext">Next</button>
+            </div>
+        </div>
+    </div>
 
     <script src="{% static 'transcriber/js/app_v3.js' %}"></script>
 </body>
