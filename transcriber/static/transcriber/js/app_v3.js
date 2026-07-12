@@ -32,6 +32,7 @@
     let isRecording = false;
     let selectedLang = 'ta';
     let selectedTargetLang = 'en';
+    let selectedAudioSource = 'mic';
     let chunkInterval = null;
     let activeTreeTab = 'indo-aryan';
     let currentViewMode = 'grid';
@@ -57,7 +58,7 @@
         recordBtn:       $('recordBtn'),
         recordBtnIcon:   $('recordBtnIcon'),
         recordBtnLabel:  $('recordBtnLabel'),
-        audioSourceSelect: $('audioSourceSelect'),
+        audioSourceToggle: $('audioSourceToggle'),
         targetLangDropdownBtn: $('targetLangDropdownBtn'),
         targetLangDropdown: $('targetLangDropdown'),
         selectedTargetLangLabel: $('selectedTargetLangLabel'),
@@ -282,7 +283,7 @@
     }
 
     async function startRecording() {
-        const sourceMode = dom.audioSourceSelect ? dom.audioSourceSelect.value : 'mic';
+        const sourceMode = selectedAudioSource;
         try {
             if (sourceMode === 'system') {
                 // Request display media (screen/tab share) with audio
@@ -1518,17 +1519,25 @@
             }
         });
 
-        // Audio Source select listener
-        if (dom.audioSourceSelect) {
-            dom.audioSourceSelect.addEventListener('change', (e) => {
-                const source = e.target.value;
-                const label = source === 'system' ? 'System Audio (Tab/Window)' : 'Microphone';
-                showToast(`Audio Source: ${label}`, 'info');
-                
-                if (isRecording) {
-                    stopRecording();
-                    showToast('Restart recording to apply source change', 'warning');
-                }
+        // Audio Source Segmented Control click listener
+        if (dom.audioSourceToggle) {
+            dom.audioSourceToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const source = btn.dataset.source;
+                    if (selectedAudioSource === source) return;
+
+                    dom.audioSourceToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    selectedAudioSource = source;
+                    const label = source === 'system' ? 'System Audio (Tab/Window)' : 'Microphone';
+                    showToast(`Audio Source: ${label}`, 'info');
+
+                    if (isRecording) {
+                        stopRecording();
+                        showToast('Restart recording to apply source change', 'warning');
+                    }
+                });
             });
         }
 

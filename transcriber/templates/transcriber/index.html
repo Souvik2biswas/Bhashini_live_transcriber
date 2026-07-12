@@ -200,11 +200,15 @@
                     <span class="record-btn-label" id="recordBtnLabel">Start Recording</span>
                 </button>
 
-                <!-- Audio Source Select -->
-                <select id="audioSourceSelect" class="audio-source-select" title="Choose audio source">
-                    <option value="mic">🎙️ Microphone</option>
-                    <option value="system">🖥️ System Audio</option>
-                </select>
+                <!-- Audio Source Segmented Control -->
+                <div class="view-toggle" id="audioSourceToggle">
+                    <button class="toggle-btn active" data-source="mic" id="btnSourceMic" title="Use Microphone">
+                        🎙️ <span>Microphone</span>
+                    </button>
+                    <button class="toggle-btn" data-source="system" id="btnSourceSystem" title="Use System Audio (Tab/Window)">
+                        🖥️ <span>System Audio</span>
+                    </button>
+                </div>
 
                 <!-- Audio Level Meter -->
                 <div class="level-meter-container" id="levelMeterContainer">
