@@ -52,6 +52,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         """Accept the WebSocket connection and initialise session state."""
         self.source_lang = "ta"  # Default to Tamil
+        self.target_lang = "en"  # Default target to English
         self.chunk_count = 0
         self.skip_count = 0
         self.error_count = 0
@@ -135,8 +136,9 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
     # ── Config Handler ────────────────────────────────────────────────────────
 
     async def _handle_config(self, msg: dict):
-        """Set the source language and pre-fetch the pipeline config."""
+        """Set the source and target languages and pre-fetch the pipeline config."""
         lang = msg.get("lang", "ta")
+        target = msg.get("target_lang", "en")
 
         if lang not in SUPPORTED_CODES:
             await self._send_error(
@@ -145,7 +147,15 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
             )
             return
 
+        if target not in SUPPORTED_CODES and target != "en":
+            await self._send_error(
+                f"Unsupported target language: {target}. "
+                f"Supported: {', '.join(SUPPORTED_CODES)}"
+            )
+            return
+
         self.source_lang = lang
+        self.target_lang = target
         self.chunk_count = 0
         self.skip_count = 0
         self.error_count = 0
@@ -153,13 +163,16 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
 
         # Pre-fetch pipeline config (warm up)
         try:
-            config = await sync_to_async(get_pipeline_config)(lang)
+            config = await sync_to_async(get_pipeline_config)(lang, target)
             lang_info = LANGUAGES[lang]
+            target_info = LANGUAGES.get(target, {"name": "English", "native": "English"})
             await self.send(text_data=json.dumps({
                 "type": "config_ready",
                 "lang": lang_info["name"],
                 "native": lang_info["native"],
                 "code": lang,
+                "target_lang": target_info["name"],
+                "target_code": target,
                 "asr_service": config["asr_service_id"],
                 "nmt_service": config["nmt_service_id"],
             }))
@@ -222,7 +235,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
             t0 = time.perf_counter()
             transcript, translation = await sync_to_async(
                 transcribe_and_translate
-            )(wav_b64, self.source_lang)
+            )(wav_b64, self.source_lang, self.target_lang)
             latency = time.perf_counter() - t0
 
             chunk_duration = len(pcm_bytes) / (16000 * 2)
@@ -241,6 +254,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
                 return
 
             lang_info = LANGUAGES[self.source_lang]
+            target_info = LANGUAGES.get(self.target_lang, {"name": "English", "native": "English"})
             await self.send(text_data=json.dumps({
                 "type": "transcription",
                 "chunk_num": chunk_num,
@@ -248,6 +262,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
                 "translation": translation,
                 "lang": lang_info["name"],
                 "native": lang_info["native"],
+                "target_lang": target_info["name"],
                 "latency": round(latency, 2),
                 "rms": round(rms, 1),
             }))
@@ -282,7 +297,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
 
         try:
             t0 = time.perf_counter()
-            translation = await sync_to_async(translate_text)(text, lang)
+            translation = await sync_to_async(translate_text)(text, lang, self.target_lang)
             latency = time.perf_counter() - t0
 
             await self.send(text_data=json.dumps({
@@ -290,6 +305,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
                 "source": text,
                 "translation": translation,
                 "lang": LANGUAGES[lang]["name"],
+                "target_lang": LANGUAGES.get(self.target_lang, {"name": "English"})["name"],
                 "latency": round(latency, 2),
             }))
         except (RuntimeError, ValueError) as e:

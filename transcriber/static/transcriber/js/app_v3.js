@@ -31,6 +31,7 @@
     let reconnectAttempts = 0;
     let isRecording = false;
     let selectedLang = 'ta';
+    let selectedTargetLang = 'en';
     let chunkInterval = null;
     let activeTreeTab = 'indo-aryan';
     let currentViewMode = 'grid';
@@ -57,6 +58,7 @@
         recordBtnIcon:   $('recordBtnIcon'),
         recordBtnLabel:  $('recordBtnLabel'),
         audioSourceSelect: $('audioSourceSelect'),
+        targetLangSelect: $('targetLangSelect'),
         levelContainer:  $('levelMeterContainer'),
         levelFill:       $('levelFill'),
         levelLabel:      $('levelLabel'),
@@ -155,7 +157,11 @@
 
     function sendConfig(lang) {
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'config', lang: lang }));
+            ws.send(JSON.stringify({
+                type: 'config',
+                lang: lang,
+                target_lang: selectedTargetLang
+            }));
         }
     }
 
@@ -194,7 +200,7 @@
                 break;
 
             case 'config_ready':
-                console.log(`[Config] ${msg.lang} ready — ASR: ${msg.asr_service}, NMT: ${msg.nmt_service}`);
+                console.log(`[Config] ${msg.lang} ➜ ${msg.target_lang} ready — ASR: ${msg.asr_service}, NMT: ${msg.nmt_service}`);
                 break;
 
             case 'processing':
@@ -493,6 +499,31 @@
 
     function renderLanguageGrid(languages) {
         supportedLanguages = languages;
+
+        // Dynamically populate Target Language Select dropdown
+        if (dom.targetLangSelect) {
+            const currentTarget = selectedTargetLang || 'en';
+            dom.targetLangSelect.innerHTML = '';
+            
+            const enOpt = document.createElement('option');
+            enOpt.value = 'en';
+            enOpt.textContent = 'English';
+            if (currentTarget === 'en') enOpt.selected = true;
+            dom.targetLangSelect.appendChild(enOpt);
+            
+            const otherLangs = Object.entries(languages)
+                .filter(([code, info]) => code !== 'en' && info.translation_supported !== false)
+                .sort((a, b) => a[1].name.localeCompare(b[1].name));
+                
+            otherLangs.forEach(([code, info]) => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = `${info.name} (${info.native})`;
+                if (currentTarget === code) opt.selected = true;
+                dom.targetLangSelect.appendChild(opt);
+            });
+        }
+
         if (!dom.languageGrid) return;
 
         dom.languageGrid.innerHTML = '';
@@ -1000,7 +1031,7 @@
                 <span class="source-text">${escapeHtml(msg.transcript)}</span>
             </div>
             <div class="result-translation">
-                <span class="lang-tag">English</span>
+                <span class="lang-tag">${escapeHtml(msg.target_lang || "English")}</span>
                 <span class="translation-text">${escapeHtml(msg.translation)}</span>
             </div>
         `;
@@ -1121,7 +1152,7 @@
         dom.textOutput.innerHTML = `
             <div>
                 <div class="translated-result">${escapeHtml(msg.translation)}</div>
-                <div class="translation-latency">${msg.lang} → English · ${msg.latency}s</div>
+                <div class="translation-latency">${escapeHtml(msg.lang)} ➜ ${escapeHtml(msg.target_lang || "English")} · ${msg.latency}s</div>
             </div>
         `;
     }
@@ -1488,6 +1519,27 @@
                 if (isRecording) {
                     stopRecording();
                     showToast('Restart recording to apply source change', 'warning');
+                }
+            });
+        }
+
+        // Target Language select listener
+        if (dom.targetLangSelect) {
+            dom.targetLangSelect.addEventListener('change', (e) => {
+                selectedTargetLang = e.target.value;
+                const label = dom.targetLangSelect.options[dom.targetLangSelect.selectedIndex].text;
+                showToast(`Target Language: ${label}`, 'info');
+                
+                sendConfig(selectedLang);
+                
+                // If recording, stop and restart to apply new target language
+                if (isRecording) {
+                    stopRecording();
+                    setTimeout(() => {
+                        if (supportedLanguages[selectedLang]?.asr_supported) {
+                            startRecording();
+                        }
+                    }, 500);
                 }
             });
         }
