@@ -56,6 +56,7 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
         self.skip_count = 0
         self.error_count = 0
         self.pcm_buffer = bytearray()  # Raw PCM stream buffer
+        self.tasks = set()
         await self.accept()
 
         # Send initial supported languages list
@@ -76,6 +77,10 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         """Log session summary on disconnect."""
+        # Cancel any running background tasks
+        for task in list(self.tasks):
+            task.cancel()
+
         logger.info(
             f"WebSocket disconnected (code={close_code}). "
             f"Chunks: {self.chunk_count}, Skipped: {self.skip_count}, "
@@ -118,7 +123,14 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
             while len(self.pcm_buffer) >= chunk_size:
                 pcm_chunk = bytes(self.pcm_buffer[:chunk_size])
                 del self.pcm_buffer[:chunk_size]
-                await self._process_pcm_chunk(pcm_chunk)
+                
+                self.chunk_count += 1
+                import asyncio
+                task = asyncio.create_task(
+                    self._process_pcm_chunk(pcm_chunk, self.chunk_count)
+                )
+                self.tasks.add(task)
+                task.add_done_callback(self.tasks.discard)
 
     # ── Config Handler ────────────────────────────────────────────────────────
 
@@ -162,13 +174,19 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
         if len(self.pcm_buffer) >= 1.5 * 16000 * 2:
             pcm_chunk = bytes(self.pcm_buffer)
             self.pcm_buffer.clear()
-            await self._process_pcm_chunk(pcm_chunk)
+            self.chunk_count += 1
+            import asyncio
+            task = asyncio.create_task(
+                self._process_pcm_chunk(pcm_chunk, self.chunk_count)
+            )
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
         else:
             self.pcm_buffer.clear()
 
     # ── Audio Chunk Handler ───────────────────────────────────────────────────
 
-    async def _process_pcm_chunk(self, pcm_bytes: bytes):
+    async def _process_pcm_chunk(self, pcm_bytes: bytes, chunk_num: int):
         """
         Process a raw PCM chunk:
         1. Calculate RMS directly (silence gate)
@@ -176,9 +194,6 @@ class TranscriptionConsumer(AsyncWebsocketConsumer):
         3. Send to Bhashini API
         4. Send results back to client
         """
-        self.chunk_count += 1
-        chunk_num = self.chunk_count
-
         try:
             # ── Step 1: Check silence ─────────────────────────────────────────
             rms = await sync_to_async(compute_rms_pcm)(pcm_bytes)

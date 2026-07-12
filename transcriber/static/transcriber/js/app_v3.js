@@ -198,12 +198,12 @@
                 break;
 
             case 'processing':
-                removeProcessingCards();
+                removeProcessingCard(msg.chunk_num);
                 addProcessingCard(msg.chunk_num);
                 break;
 
             case 'transcription':
-                removeProcessingCards();
+                removeProcessingCard(msg.chunk_num);
                 addTranscriptionCard(msg);
                 stats.chunks++;
                 stats.lastLatency = msg.latency;
@@ -220,11 +220,11 @@
                 break;
 
             case 'no_speech':
-                removeProcessingCards();
+                removeProcessingCard(msg.chunk_num);
                 break;
 
             case 'error':
-                removeProcessingCards();
+                removeProcessingCard(msg.chunk_num);
                 addErrorCard(msg.message, msg.chunk_num);
                 stats.errors++;
                 updateStats();
@@ -974,6 +974,7 @@
 
         const card = document.createElement('div');
         card.className = 'result-card';
+        card.dataset.chunk = msg.chunk_num;
 
         const time = new Date().toLocaleTimeString('en-IN', {
             hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
@@ -1004,8 +1005,7 @@
             </div>
         `;
 
-        // Insert at top
-        dom.resultsContainer.insertBefore(card, dom.resultsContainer.firstChild);
+        insertResultCard(card);
 
         // Auto-scroll to top if enabled
         if (autoScrollEnabled) {
@@ -1013,12 +1013,39 @@
         }
     }
 
+    function insertResultCard(card) {
+        const newChunkNum = parseInt(card.dataset.chunk);
+        if (isNaN(newChunkNum)) {
+            dom.resultsContainer.insertBefore(card, dom.resultsContainer.firstChild);
+            return;
+        }
+
+        const container = dom.resultsContainer;
+        const cards = container.querySelectorAll('.result-card');
+        let insertBeforeEl = null;
+
+        for (let i = 0; i < cards.length; i++) {
+            const currentChunkNum = parseInt(cards[i].dataset.chunk);
+            if (isNaN(currentChunkNum)) continue;
+
+            if (currentChunkNum < newChunkNum) {
+                insertBeforeEl = cards[i];
+                break;
+            }
+        }
+
+        container.insertBefore(card, insertBeforeEl);
+    }
+
     function addProcessingCard(chunkNum) {
         hideEmptyState();
 
+        if (document.getElementById(`processingCard-${chunkNum}`)) return;
+
         const card = document.createElement('div');
         card.className = 'result-card processing';
-        card.id = 'processingCard';
+        card.id = `processingCard-${chunkNum}`;
+        card.dataset.chunk = chunkNum;
 
         card.innerHTML = `
             <div class="processing-indicator">
@@ -1029,12 +1056,15 @@
             </div>
         `;
 
-        dom.resultsContainer.insertBefore(card, dom.resultsContainer.firstChild);
+        insertResultCard(card);
     }
 
-    function removeProcessingCards() {
-        const existing = document.querySelectorAll('.result-card.processing');
-        existing.forEach(el => el.remove());
+    function removeProcessingCard(chunkNum) {
+        if (!chunkNum) return;
+        const el = document.getElementById(`processingCard-${chunkNum}`);
+        if (el) {
+            el.remove();
+        }
     }
 
     function addErrorCard(message, chunkNum) {
@@ -1042,6 +1072,9 @@
 
         const card = document.createElement('div');
         card.className = 'result-card error-card';
+        if (chunkNum) {
+            card.dataset.chunk = chunkNum;
+        }
 
         const prefix = chunkNum ? `Chunk #${String(chunkNum).padStart(3, '0')}: ` : '';
 
@@ -1052,7 +1085,7 @@
             </div>
         `;
 
-        dom.resultsContainer.insertBefore(card, dom.resultsContainer.firstChild);
+        insertResultCard(card);
     }
 
     function clearResults() {
