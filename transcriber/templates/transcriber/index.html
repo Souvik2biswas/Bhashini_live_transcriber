@@ -93,7 +93,7 @@
                         <button class="scroll-toggle" id="targetLangDropdownBtn" title="Select target language" style="height:34px; padding:6px 16px; border-radius:20px; font-size:0.8rem; font-weight:500;">
                             🌐 Translate to: <strong id="selectedTargetLangLabel" style="color: var(--accent-indigo); margin-left: 4px;">English</strong>
                         </button>
-                        <div class="export-dropdown hidden" id="targetLangDropdown" style="max-height:280px; overflow-y:auto; right:0; min-width:185px;">
+                        <div class="export-dropdown hidden bhashini-skip-translation" id="targetLangDropdown" style="max-height:280px; overflow-y:auto; right:0; min-width:185px;">
                             <!-- Dynamically populated buttons -->
                         </div>
                     </div>
@@ -111,7 +111,7 @@
             </div>
             
             <!-- Interactive Language Trees (Hidden by default) -->
-            <div class="language-tree-container hidden" id="languageTreeContainer">
+            <div class="language-tree-container hidden bhashini-skip-translation" id="languageTreeContainer">
                 <div class="tree-tabs" id="treeTabs">
                     <button class="tree-tab active" data-tab="indo-aryan">Indo-Aryan Branch</button>
                     <button class="tree-tab" data-tab="dravidian">Dravidian Family</button>
@@ -132,7 +132,7 @@
             </div>
 
             <!-- Language Search -->
-            <div class="language-search-wrapper" id="languageSearchWrapper">
+            <div class="language-search-wrapper bhashini-skip-translation" id="languageSearchWrapper">
                 <input type="text" id="languageSearch" class="language-search" placeholder="Search languages by name, native script, or code…">
                 <span class="language-search-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -151,7 +151,7 @@
                 <button class="filter-pill" data-family="Other">Other / Global</button>
             </div>
 
-            <div class="language-grid" id="languageGrid">
+            <div class="language-grid bhashini-skip-translation" id="languageGrid">
                 <button class="lang-card active" data-lang="ta" id="lang-ta">
                     <span class="lang-native">தமிழ்</span>
                     <span class="lang-name">Tamil</span>
@@ -206,26 +206,26 @@
                     <div class="level-meter">
                         <div class="level-fill" id="levelFill"></div>
                     </div>
-                    <span class="level-label" id="levelLabel">—</span>
+                    <span class="level-label bhashini-skip-translation" id="levelLabel">—</span>
                 </div>
             </div>
 
             <!-- Stats Bar -->
             <div class="stats-bar" id="statsBar">
                 <div class="stat">
-                    <span class="stat-value" id="statChunks">0</span>
+                    <span class="stat-value bhashini-skip-translation" id="statChunks">0</span>
                     <span class="stat-label">Chunks</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-value" id="statSkipped">0</span>
+                    <span class="stat-value bhashini-skip-translation" id="statSkipped">0</span>
                     <span class="stat-label">Skipped</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-value" id="statLatency">—</span>
+                    <span class="stat-value bhashini-skip-translation" id="statLatency">—</span>
                     <span class="stat-label">Latency</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-value" id="statErrors">0</span>
+                    <span class="stat-value bhashini-skip-translation" id="statErrors">0</span>
                     <span class="stat-label">Errors</span>
                 </div>
             </div>
@@ -266,7 +266,7 @@
                 </div>
             </div>
 
-            <div class="results-container" id="resultsContainer">
+            <div class="results-container bhashini-skip-translation" id="resultsContainer">
                 <!-- Placeholder shown when empty -->
                 <div class="results-empty" id="resultsEmpty">
                     <div class="empty-icon">
@@ -290,7 +290,7 @@
                 <div class="text-input-group">
                     <textarea
                         id="textInput"
-                        class="text-input"
+                        class="text-input bhashini-skip-translation"
                         placeholder="Type text in the selected language…"
                         rows="3"
                     ></textarea>
@@ -302,7 +302,7 @@
                         Translate
                     </button>
                 </div>
-                <div class="text-output" id="textOutput">
+                <div class="text-output bhashini-skip-translation" id="textOutput">
                     <span class="text-output-placeholder">Translation will appear here</span>
                 </div>
             </div>
@@ -339,5 +339,7 @@
     </div>
 
     <script src="{% static 'transcriber/js/app_v3.js' %}"></script>
+    <!-- Bhashini Website Translation Plugin -->
+    <script src="https://translation-plugin.bhashini.co.in/v2/website_translation_utility.js" data-pos-x="10" data-pos-y="10"></script>
 </body>
 </html>

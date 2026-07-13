@@ -24,6 +24,7 @@
     let ws = null;
     let mediaRecorder = null;
     let scriptProcessor = null;
+    let workletNode = null;
     let audioStream = null;
     let audioContext = null;
     let analyser = null;
@@ -321,27 +322,48 @@
             // Set up Web Audio API for level metering and get the source node
             const source = setupAudioAnalyser(audioStream);
 
-            // Create script processor (bufferSize 4096 is standard and stable)
-            scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-            source.connect(scriptProcessor);
-            scriptProcessor.connect(audioContext.destination);
-
-            scriptProcessor.onaudioprocess = (e) => {
-                if (!isRecording) return;
-                const inputData = e.inputBuffer.getChannelData(0);
-                const resampled = resample(inputData, audioContext.sampleRate, 16000);
-                const pcmBuffer = floatTo16BitPCM(resampled);
-
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(pcmBuffer);
+            // Attempt to load and instantiate AudioWorkletProcessor
+            try {
+                if (typeof audioContext.audioWorklet === 'undefined') {
+                    throw new Error('AudioWorklet is not supported in this browser context (possibly non-secure context)');
                 }
-            };
+                await audioContext.audioWorklet.addModule('/static/transcriber/js/audio_processor.js');
+                workletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+                source.connect(workletNode);
+                workletNode.connect(audioContext.destination);
+
+                workletNode.port.onmessage = (e) => {
+                    if (!isRecording) return;
+                    const pcmBuffer = e.data; // ArrayBuffer from AudioWorkletProcessor
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(pcmBuffer);
+                    }
+                };
+                console.log('[Recorder] Started continuous AudioWorklet PCM streaming');
+            } catch (workletError) {
+                console.warn('[Recorder] AudioWorklet failed/unsupported. Falling back to ScriptProcessorNode:', workletError);
+                // Create script processor (bufferSize 4096 is standard and stable)
+                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const resampled = resample(inputData, audioContext.sampleRate, 16000);
+                    const pcmBuffer = floatTo16BitPCM(resampled);
+
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(pcmBuffer);
+                    }
+                };
+                console.log(`[Recorder] Started continuous ScriptProcessor PCM streaming (resampled from ${audioContext.sampleRate}Hz to 16000Hz)`);
+            }
 
             isRecording = true;
 
             // Update UI
             updateRecordingUI(true);
-            console.log(`[Recorder] Started continuous PCM streaming (${sourceMode}, resampled from ${audioContext.sampleRate}Hz to 16000Hz)`);
 
         } catch (err) {
             console.error('[Recorder] Failed to start:', err);
@@ -365,6 +387,11 @@
         // Notify server that recording has stopped (to flush remaining buffer)
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'stop' }));
+        }
+
+        if (workletNode) {
+            workletNode.disconnect();
+            workletNode = null;
         }
 
         if (scriptProcessor) {

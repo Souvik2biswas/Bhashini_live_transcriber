@@ -222,20 +222,23 @@ _config_cache: dict = {}
 _cache_lock = threading.Lock()
 
 
-def get_pipeline_config(source_lang: str, target_lang: str = "en") -> dict:
+def get_pipeline_config(source_lang: str, target_lang: str = "en", force_refresh: bool = False) -> dict:
     """
     Pipeline Config Call — fetches ASR + NMT service IDs and the dynamic
-    inference endpoint. Result is cached per (source, target) pair for the
-    lifetime of the process.
+    inference endpoint. Result is cached per (source, target) pair with a
+    1-hour Time-To-Live (TTL) to handle dynamic key expiration/rotation.
 
     Returns dict with:
         callback_url, auth_key_name, auth_key_value,
         asr_service_id, nmt_service_id
     """
     cache_key = (source_lang, target_lang)
-    with _cache_lock:
-        if cache_key in _config_cache:
-            return _config_cache[cache_key]
+    if not force_refresh:
+        with _cache_lock:
+            if cache_key in _config_cache:
+                entry = _config_cache[cache_key]
+                if time.time() - entry["timestamp"] < 3600:
+                    return entry["data"]
 
     tasks = []
     lang_info = LANGUAGES.get(source_lang, {})
@@ -328,7 +331,10 @@ def get_pipeline_config(source_lang: str, target_lang: str = "en") -> dict:
     }
 
     with _cache_lock:
-        _config_cache[cache_key] = result
+        _config_cache[cache_key] = {
+            "data": result,
+            "timestamp": time.time()
+        }
 
     return result
 
@@ -408,7 +414,23 @@ def transcribe_and_translate(
                 break
             else:
                 last_error_msg = f"Dhruva API {resp.status_code}: {resp.reason} (Attempt {attempt})"
-                if resp.status_code == 500 or resp.status_code == 429:
+                if resp.status_code in (401, 403):
+                    try:
+                        config = get_pipeline_config(source_lang, target_lang, force_refresh=True)
+                        headers = {
+                            config["auth_key_name"]: config["auth_key_value"],
+                            "Content-Type": "application/json"
+                        }
+                        for task in payload["pipelineTasks"]:
+                            if task["taskType"] == "asr":
+                                task["config"]["serviceId"] = config["asr_service_id"]
+                            elif task["taskType"] == "translation":
+                                task["config"]["serviceId"] = config["nmt_service_id"]
+                    except Exception as refresh_err:
+                        raise RuntimeError(f"Config refresh failed on HTTP {resp.status_code}: {refresh_err}")
+                    time.sleep(retry_delay * attempt)
+                    continue
+                elif resp.status_code == 500 or resp.status_code == 429:
                     time.sleep(retry_delay * attempt)
                     continue
                 else:
@@ -508,17 +530,50 @@ def translate_text(text: str, source_lang: str, target_lang: str = "en") -> str:
         "Content-Type": "application/json"
     }
 
-    try:
-        resp = requests.post(
-            config["callback_url"],
-            json=payload,
-            headers=headers,
-            timeout=25
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(f"Translation call failed: {e}")
+    max_retries = 3
+    retry_delay = 0.3
+    last_error_msg = ""
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.post(
+                config["callback_url"],
+                json=payload,
+                headers=headers,
+                timeout=25
+            )
+            if resp.ok:
+                data = resp.json()
+                break
+            else:
+                last_error_msg = f"Dhruva API {resp.status_code}: {resp.reason} (Attempt {attempt})"
+                if resp.status_code in (401, 403):
+                    try:
+                        config = get_pipeline_config(source_lang, force_refresh=True)
+                        headers = {
+                            config["auth_key_name"]: config["auth_key_value"],
+                            "Content-Type": "application/json"
+                        }
+                        payload["pipelineTasks"][0]["config"]["serviceId"] = config["nmt_service_id"]
+                    except Exception as refresh_err:
+                        raise RuntimeError(f"Config refresh failed on HTTP {resp.status_code}: {refresh_err}")
+                    time.sleep(retry_delay * attempt)
+                    continue
+                elif resp.status_code == 500 or resp.status_code == 429:
+                    time.sleep(retry_delay * attempt)
+                    continue
+                else:
+                    raise RuntimeError(last_error_msg + f"\nBody: {resp.text[:500]}")
+        except requests.exceptions.Timeout:
+            last_error_msg = f"Translation call timed out (Attempt {attempt})"
+            time.sleep(retry_delay * attempt)
+            continue
+        except requests.exceptions.RequestException as e:
+            last_error_msg = f"Translation call failed: {e} (Attempt {attempt})"
+            time.sleep(retry_delay * attempt)
+            continue
+    else:
+        raise RuntimeError(f"Translation failed after {max_retries} attempts. Last error: {last_error_msg}")
 
     try:
         return data["pipelineResponse"][0]["output"][0]["target"]
