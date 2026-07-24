@@ -1,37 +1,57 @@
 # Bhashini Live Transcriber & Translator
 
-A premium, real-time speech transcription and translation web application built using **Django Channels (WebSockets)**, powered by the **Bhashini (ULCA / Dhruva) API** (MeitY, Govt. of India) to translate Dravidian languages (Tamil, Telugu, Kannada, and Malayalam) into English.
+A high-performance, real-time speech transcription and machine translation web application built using **Django Channels (WebSockets)** and browser **Web Audio API (`AudioWorkletProcessor`)**, powered by the **Bhashini (ULCA / Dhruva) API** (MeitY, Govt. of India) to transcribe and translate **22+ Scheduled Indian Languages** into English.
+
+---
 
 ## 🚀 Key Features
-* **Real-time Gapless Streaming**: Uses browser-side Web Audio API (`ScriptProcessorNode`) to stream continuous, raw PCM audio directly over WebSockets, avoiding standard `MediaRecorder` starting/stopping gaps.
-* **Low Latency (<1.5s)**: Optimised server-side WAV packaging. Packaged in-memory in pure Python using `struct` (no external subprocesses or `ffmpeg` required on the hot path).
-* **Calibrated Silence Gate**: Automatic background noise filtering (calibrated to ignore ambient laptop mic noise under 800 RMS) to prevent blank inputs from crashing the ASR engine.
-* **Robust Transient Error Handling**: Transparent API retry logic (up to 3 attempts with backoff) to recover from temporary Bhashini service hiccups.
-* **Premium Glassmorphic UI**: Real-time audio level meter, pulsing recording indicators, responsive slide-in cards, and support for dark mode.
-* **Dual Translation Modes**: High-fidelity live audio transcription/translation alongside instant text-input translation.
+
+* **🌐 Pan-Indian Multilingual Support (22+ Languages)**: Supports ASR and NMT across 22+ Scheduled Indian languages (Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, Kannada, Malayalam, Odia, Punjabi, Sanskrit, Urdu, Assamese, Manipuri, Bodo, Dogri, Kashmiri, Konkani, Maithili, Nepali, Santali, Sindhi) covering 4 major language families (*Indo-Aryan, Dravidian, Sino-Tibetan, Austroasiatic*).
+* **🎙️ Off-Thread Real-Time Audio Resampling**: Uses a custom browser-side `AudioWorkletProcessor` running on a dedicated audio render thread to capture, downsample (to 16kHz mono), and convert Float32 audio to 16-bit PCM in real time without blocking the UI main thread.
+* **🔊 Dual Audio Capture Modes**: Seamlessly switch between **Microphone** input and **System Audio** (Screen/Tab/Window audio sharing).
+* **⚡ Ultra-Low Latency (<1.5s)**: In-memory pure Python 44-byte WAV header attachment using `struct` and `numpy`. Operates entirely on the hot path with zero disk I/O and zero external `ffmpeg` subprocess overhead.
+* **🔇 Calibrated RMS Silence Gate**: Calculates RMS energy directly from raw signed 16-bit PCM. Automatically filters out background ambient noise (<800 RMS) to eliminate empty ASR API triggers.
+* **🛡️ Thread-Safe Caching & Resilience**: Features a thread-safe (`threading.Lock`) 1-hour TTL pipeline configuration cache, HTTP connection pooling (`requests.Session`), automatic 401/403 auth key expiration refresh, and exponential backoff retry mechanisms.
+* **📥 Multi-Format Export Options**: Easily export live transcriptions as **Plain Text (TXT)**, **Subtitles (SRT with timestamps)**, or copy directly to clipboard.
+* **🌳 Interactive Language Family Visualizations**: Explore language relationships through interactive SVG language trees/graphs categorized by linguistic branches, alongside tabular grid search and family filter pills.
+* **✨ Glassmorphic UI & Dark Mode**: Real-time audio level meters, dynamic status indicators, dark/light theme toggle, auto-scroll controls, and an interactive onboarding guide.
 
 ---
 
 ## 🛠️ Architecture
 
-```
-🎤 Browser Mic (Web Audio API)
+```text
+🎤 Browser Audio (Mic / System)
      │
-     ▼ (Continuous 16kHz PCM streaming)
+     ▼ (Dedicated Render Thread: AudioWorkletProcessor - Float32 → 16kHz Int16 PCM)
+ArrayBuffer (Zero-copy transfer to main thread)
+     │
+     ▼ (Continuous WebSocket binary PCM streaming)
+Django Channels (TranscriptionConsumer / Daphne ASGI)
+     │
+     ├──► NumPy RMS Silence Gate (<800 RMS dropped)
+     │
+     ▼ (Pure-Python In-Memory WAV Packaging via `struct`)
+Bhashini Chained API (ASR + NMT)
+     │
+     ▼ (JSON callback push)
 WebSocket Frame
      │
      ▼
-Django Channels (TranscriptionConsumer)
-     │
-     ▼ (In-Memory 44-Byte WAV Header Attachment)
-Bhashini Chained API (ASR + NMT)
-     │
-     ▼ (Dynamic callback response)
-WebSocket Push
-     │
-     ▼
-Browser UI (Animated Cards)
+Browser UI (Real-time Cards, Level Meter, SRT Exporter)
 ```
+
+---
+
+## 🔤 Supported Languages (22+)
+
+| Language Family | Languages Supported |
+| :--- | :--- |
+| **Indo-Aryan** | Hindi (`hi`), Bengali (`bn`), Marathi (`mr`), Gujarati (`gu`), Punjabi (`pa`), Odia (`or`), Sanskrit (`sa`), Urdu (`ur`), Assamese (`as`), Dogri (`doi`), Kashmiri (`ks`), Konkani (`gom`), Maithili (`mai`), Nepali (`ne`), Sindhi (`sd`) |
+| **Dravidian** | Tamil (`ta`), Telugu (`te`), Kannada (`kn`), Malayalam (`ml`) |
+| **Sino-Tibetan** | Bodo (`brx`), Manipuri (`mni`) |
+| **Austroasiatic** | Santali (`sat`) |
+| **Global Target** | English (`en`) |
 
 ---
 
@@ -39,17 +59,16 @@ Browser UI (Animated Cards)
 
 ### 1. Prerequisites
 * **Python 3.10+**
-* **ffmpeg** (Optional: only needed if testing legacy WebM/Opus fallbacks)
 
 ### 2. Clone and Install
 ```bash
 git clone https://github.com/Souvik2biswas/Bhashini_live_transcriber.git
-cd Bhashini_live_transcriber
+cd Bhashini_live_transcriber/bhashini_web
 pip install -r requirements.txt
 ```
 
-### 3. Configure API Credentials
-Create a `.env` file in the root directory:
+### 3. Configure Environment Variables
+Create a `.env` file in `bhashini_web/`:
 ```env
 # Bhashini Credentials (Get yours from https://bhashini.gov.in/ulca)
 BHASHINI_USER_ID=your_user_id
@@ -61,43 +80,46 @@ DJANGO_SECRET_KEY=your-production-secret-key
 DJANGO_DEBUG=True
 ```
 
-### 4. Run the Development Server
+### 4. Run Development Server
 ```bash
 python manage.py runserver 8000
 ```
-Open **`http://127.0.0.1:8000`** in your browser, select a language, and start speaking!
+Open **`http://127.0.0.1:8000`** in your browser, pick your language, and start transcribing live!
 
 ---
 
 ## 🌐 Production Deployment (Render)
 
-This project requires an **ASGI server (Daphne)** to support long-running WebSocket connections. **Render** is the recommended zero-config PaaS platform.
+This project uses **Daphne (ASGI)** to handle full-duplex WebSocket connections.
 
 1. Connect your repository to **Render** and create a new **Web Service**.
-2. Configure settings:
+2. Settings:
    * **Runtime**: `Python`
    * **Build Command**: `pip install -r requirements.txt && python manage.py collectstatic --noinput`
    * **Start Command**: `daphne -b 0.0.0.0 -p $PORT bhashini_web.asgi:application`
-3. Add Environment Variables:
-   * `BHASHINI_USER_ID`
-   * `BHASHINI_ULCA_KEY`
-   * `BHASHINI_INFERENCE_KEY`
-   * `DJANGO_DEBUG` = `False`
+3. Environment Variables:
+   * Add `BHASHINI_USER_ID`, `BHASHINI_ULCA_KEY`, `BHASHINI_INFERENCE_KEY`, `DJANGO_DEBUG=False`, `DJANGO_SECRET_KEY`.
 
 ---
 
 ## 📂 Project Structure
-```
+
+```text
 bhashini_web/
-├── bhashini_web/          # Settings, routing, and ASGI config
+├── bhashini_web/          # Core Django project settings & ASGI configuration
 │   ├── asgi.py            # Protocol routers (HTTP & WebSockets)
 │   └── settings.py
 ├── transcriber/           # Application Package
-│   ├── bhashini_api.py    # Thread-safe API caching & retries
-│   ├── audio_utils.py     # Pure-Python WAV header construction & RMS
-│   ├── consumers.py       # WebSocket connection & binary frame accumulator
-│   ├── static/            # Stylesheets and frontend application JS
-│   └── templates/         # Main HTML layout
+│   ├── bhashini_api.py    # Thread-safe API client, TTL caching & retries
+│   ├── audio_utils.py     # Pure-Python WAV header construction & NumPy RMS
+│   ├── consumers.py       # WebSocket consumer & binary PCM chunk processor
+│   ├── static/transcriber/
+│   │   ├── js/
+│   │   │   ├── audio_processor.js  # AudioWorkletProcessor (off-thread resampling)
+│   │   │   └── app_v3.js           # Main client UI & WebSocket controller
+│   │   └── css/style.css           # Glassmorphic responsive styling
+│   └── templates/transcriber/
+│       └── index.html              # Modern dashboard template
 ├── requirements.txt
 └── manage.py
 ```

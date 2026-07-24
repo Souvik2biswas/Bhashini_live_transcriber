@@ -13,3 +13,6 @@ debug/
 *.wav
 *.mp3
 *.webm
+# Virtual environment
+.venv/
+venv/

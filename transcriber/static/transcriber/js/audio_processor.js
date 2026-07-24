@@ -11,6 +11,9 @@ class AudioProcessor extends AudioWorkletProcessor {
         this.inputSampleRate = sampleRate; // Global sampleRate from context
         this.targetSampleRate = 16000;
         this.lastSampleOffset = 0.0;
+        this.bufferSize = 1600; // 100ms at 16kHz
+        this.buffer = new Int16Array(this.bufferSize);
+        this.bufferWriteIndex = 0;
     }
 
     process(inputs, outputs, parameters) {
@@ -22,7 +25,6 @@ class AudioProcessor extends AudioWorkletProcessor {
         const inputChannel = input[0];
         const ratio = this.inputSampleRate / this.targetSampleRate;
         
-        const resampled = [];
         let index = this.lastSampleOffset;
         
         // Perform linear interpolation downsampling
@@ -31,21 +33,24 @@ class AudioProcessor extends AudioWorkletProcessor {
             const nextIdx = idx + 1 < inputChannel.length ? idx + 1 : idx;
             const weight = index - idx;
             const interpolated = inputChannel[idx] * (1 - weight) + inputChannel[nextIdx] * weight;
-            resampled.push(interpolated);
+            
+            // Convert Float32 (-1.0 to 1.0) to Int16 PCM
+            const s = Math.max(-1.0, Math.min(1.0, interpolated));
+            const pcmSample = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            
+            this.buffer[this.bufferWriteIndex++] = pcmSample;
+            
+            if (this.bufferWriteIndex >= this.bufferSize) {
+                // Send the raw ArrayBuffer back as a transferable object to avoid copying overhead
+                this.port.postMessage(this.buffer.buffer, [this.buffer.buffer]);
+                // Re-allocate buffer since the previous one was transferred
+                this.buffer = new Int16Array(this.bufferSize);
+                this.bufferWriteIndex = 0;
+            }
+            
             index += ratio;
         }
         this.lastSampleOffset = index - inputChannel.length;
-
-        if (resampled.length > 0) {
-            // Convert Float32 (-1.0 to 1.0) to Int16 PCM
-            const pcmBuffer = new Int16Array(resampled.length);
-            for (let i = 0; i < resampled.length; i++) {
-                const s = Math.max(-1.0, Math.min(1.0, resampled[i]));
-                pcmBuffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-            // Send the raw ArrayBuffer back as a transferable object to avoid copying overhead
-            this.port.postMessage(pcmBuffer.buffer, [pcmBuffer.buffer]);
-        }
 
         return true;
     }

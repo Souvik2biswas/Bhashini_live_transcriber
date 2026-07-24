@@ -17,6 +17,12 @@ from typing import Optional
 import requests
 from django.conf import settings
 
+# ─── HTTP Connection Pooling ───────────────────────────────────────────────────
+_session = requests.Session()
+_adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=50)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
+
 
 # ─── Constants ──────────────────────────────────────────────────────────────────
 CONFIG_URL  = settings.BHASHINI_CONFIG_URL
@@ -274,7 +280,7 @@ def get_pipeline_config(source_lang: str, target_lang: str = "en", force_refresh
     }
 
     try:
-        resp = requests.post(CONFIG_URL, json=payload, headers=headers, timeout=15)
+        resp = _session.post(CONFIG_URL, json=payload, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()
     except requests.exceptions.Timeout:
@@ -403,7 +409,7 @@ def transcribe_and_translate(
     
     for attempt in range(1, max_retries + 1):
         try:
-            resp = requests.post(
+            resp = _session.post(
                 config["callback_url"],
                 json=payload,
                 headers=headers,
@@ -536,7 +542,7 @@ def translate_text(text: str, source_lang: str, target_lang: str = "en") -> str:
 
     for attempt in range(1, max_retries + 1):
         try:
-            resp = requests.post(
+            resp = _session.post(
                 config["callback_url"],
                 json=payload,
                 headers=headers,

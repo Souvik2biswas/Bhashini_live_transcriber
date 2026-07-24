@@ -535,7 +535,7 @@
             dom.targetLangDropdown.innerHTML = '';
             
             const enBtn = document.createElement('button');
-            enBtn.className = 'export-dropdown-item';
+            enBtn.className = 'export-dropdown-item bhashini-skip-translation';
             enBtn.dataset.lang = 'en';
             enBtn.textContent = 'English';
             if (selectedTargetLang === 'en') {
@@ -550,7 +550,7 @@
                 
             otherLangs.forEach(([code, info]) => {
                 const btn = document.createElement('button');
-                btn.className = 'export-dropdown-item';
+                btn.className = 'export-dropdown-item bhashini-skip-translation';
                 btn.dataset.lang = code;
                 btn.textContent = `${info.name} (${info.native})`;
                 if (selectedTargetLang === code) {
@@ -575,7 +575,7 @@
             if (familyLangs.length === 0) return;
 
             const sectionGroup = document.createElement('div');
-            sectionGroup.className = 'family-section-group';
+            sectionGroup.className = 'family-section-group bhashini-skip-translation';
             sectionGroup.dataset.family = family;
 
             const header = document.createElement('h3');
@@ -584,11 +584,11 @@
             sectionGroup.appendChild(header);
 
             const grid = document.createElement('div');
-            grid.className = 'language-grid';
+            grid.className = 'language-grid bhashini-skip-translation';
 
             familyLangs.forEach(([code, info]) => {
                 const card = document.createElement('button');
-                card.className = 'lang-card';
+                card.className = 'lang-card bhashini-skip-translation';
                 if (code === selectedLang) {
                     card.classList.add('active');
                 }
@@ -835,7 +835,7 @@
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 1000 ${height}`);
-        svg.className.baseVal = 'tree-svg';
+        svg.className.baseVal = 'tree-svg bhashini-skip-translation';
 
         // Draw links
         tree.links.forEach(link => {

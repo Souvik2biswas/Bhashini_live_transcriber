@@ -69,7 +69,7 @@ class BhashiniApiTestCase(TestCase):
         # Clear config cache before each test
         _config_cache.clear()
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_get_pipeline_config_success(self, mock_post):
         # Mock successful configuration response
         mock_response = MagicMock()
@@ -112,7 +112,7 @@ class BhashiniApiTestCase(TestCase):
         self.assertEqual(config, config2)
         mock_post.assert_called_once()
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_translate_text_success(self, mock_post):
         # First mock get_pipeline_config mock return
         mock_config_response = MagicMock()
@@ -155,7 +155,7 @@ class BhashiniApiTestCase(TestCase):
         self.assertEqual(translation, "Hello World")
         self.assertEqual(mock_post.call_count, 2)
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_transcribe_and_translate_success(self, mock_post):
         # 1. Pipeline config mock
         mock_config_response = MagicMock()
@@ -203,7 +203,7 @@ class BhashiniApiTestCase(TestCase):
         self.assertEqual(translation, "Hello")
         self.assertEqual(mock_post.call_count, 2)
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_transcribe_and_translate_retry_on_500(self, mock_post):
         # 1. Config call (cached afterwards)
         mock_config_response = MagicMock()
@@ -258,7 +258,7 @@ class BhashiniApiTestCase(TestCase):
             self.assertEqual(mock_post.call_count, 3)
             mock_sleep.assert_called_once()
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_get_pipeline_config_ttl_and_force_refresh(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -294,7 +294,7 @@ class BhashiniApiTestCase(TestCase):
         config4 = get_pipeline_config("ta")
         self.assertEqual(mock_post.call_count, 3)
 
-    @patch("transcriber.bhashini_api.requests.post")
+    @patch("transcriber.bhashini_api._session.post")
     def test_transcribe_and_translate_retry_on_401(self, mock_post):
         # 1. Config call
         mock_config_response = MagicMock()
